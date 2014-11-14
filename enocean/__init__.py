@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # vim: set encoding=utf-8 tabstop=4 softtabstop=4 shiftwidth=4 expandtab
+#V1.1
 
 import serial
 import os
@@ -222,6 +223,8 @@ class EnOcean():
                         rx_key = item.conf['enocean_rx_key'].upper()
                         if rx_key in results:
                             item(results[rx_key], 'EnOcean', "{:08X}".format(sender_id))
+        elif (sender_id == self.tx_id):
+            logger.debug("enocean: Received repeated enocean stick message")
         else:
             logger.info("unknown ID = {:08X}".format(sender_id))
 
@@ -388,9 +391,12 @@ class EnOcean():
                             self.send_dim(0, 0)
                             logger.debug('enocean: sent off command')
                         else:
-                            #parent = item.return_parent()
-                            #if 'level' in parent.conf:
-                            dim_value = item.level.ref_level()
+                            if 'ref_level' in item.level.conf:
+                                dim_value = int(item.level.conf['ref_level'])
+                                logger.debug('enocean: ref_level found')
+                            else:
+                                dim_value = 100
+                                logger.debug('enocean: no ref_level found. Setting to default 100')
                             self.send_dim(dim_value, 0)
                             logger.debug('enocean: sent dim on command') 
                     else:
