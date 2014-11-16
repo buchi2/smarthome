@@ -93,9 +93,17 @@ class EnOcean():
         results['AD_2'] = payload[0] * 1.8 / pow(2,8) 
         return results
 
+    def _parse_eep_A5_12_01(self, payload):
+        # Status command from switche actor with powermeter, for example eltako FSVA-230, RORG = 0x07
+        logger.debug("enocean: processing A5_12_01")
+        status = payload[3]
+        value = (payload[0] << 16) + (payload[1] << 8) + payload[2]
+        results['VALUE'] = value 
+        return results
+
     def _parse_eep_F6_02_03(self, payload):
         #Repeated switch communication(RPS) Telegramm, RORG = F6 = ORG = 0x05
-        # Status command from bidirectional actors, for example eltako FSUD-230 or switches (for example Gira)
+        # Status command from bidirectional actors, for example eltako FSUD-230, FSVA-230V or switches (for example Gira)
         logger.debug("enocean: processing F6_02_03: Rocker Switch, 2 Rocker")
         results = {}
         #Button A1: Dimm light down
