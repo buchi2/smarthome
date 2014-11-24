@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # vim: set encoding=utf-8 tabstop=4 softtabstop=4 shiftwidth=4 expandtab
-#V1.1
+#V1.3
 
 import serial
 import os
@@ -45,27 +45,29 @@ FCSTAB = [
     0xe6, 0xe1, 0xe8, 0xef, 0xfa, 0xfd, 0xf4, 0xf3
     ]
 
-PACKET_SYNC_BYTE = 0x55
+PACKET_SYNC_BYTE              = 0x55
 
-PACKET_TYPE_RADIO = 0x01               #Packet Type Radio ERP1
-PACKET_TYPE_RESPONSE = 0x02
-PACKET_TYPE_EVENT = 0x04               #Event
-PACKET_TYPE_COMMON_COMMAND = 0x05
+PACKET_TYPE_RADIO             = 0x01   #Packet Type Radio ERP1
+PACKET_TYPE_RESPONSE          = 0x02
+PACKET_TYPE_EVENT             = 0x04   #Event
+PACKET_TYPE_COMMON_COMMAND    = 0x05
 PACKET_TYPE_SMART_ACK_COMMAND = 0x06   #Smart Ack command
-PACKET_REMOTE_MAN_COMMAND = 0x07       #Remote management command
-PACKET_TYPE_RADIO_MESSAGE = 0x09
-PACKET_TYPE_RADIO_ERP2 = 0x0A          #ERP2 protocol radio telegram
+PACKET_REMOTE_MAN_COMMAND     = 0x07   #Remote management command
+PACKET_TYPE_RADIO_MESSAGE     = 0x09
+PACKET_TYPE_RADIO_ERP2        = 0x0A   #ERP2 protocol radio telegram
 
 
 CO_WR_RESET            = 0x02
 CO_RD_VERSION          = 0x03
+CO_WR_BIST             = 0x06          #Perform built in self test
 CO_RD_IDBASE           = 0x08          #Read base ID number
 CO_WR_LEARNMODE        = 0x23          #Function: Enables or disables learn mode of Controller.
 CO_RD_LEARNMODE        = 0x24          #Function: Reads the learn-mode state of Controller.
 CO_RD_NUMSECUREDEVICES = 0x29          #Read number of taught in secure devices
 CO_RD_SECUREDEVICE     = 0x30          #Read secure device by ID
 
-SENT_RADIO_PACKET      = 0xFF
+SENT_RADIO_PACKET              = 0xFF
+SENT_ENCAPSULATED_RADIO_PACKET = 0xA6
 
 logger = logging.getLogger('EnOcean')
 
@@ -209,7 +211,8 @@ class EnOcean():
         payload = data[1:-5]
         sender_id = int.from_bytes(data[-5:-1], byteorder='big', signed=False)
         status = data[-1]
-        logger.info("enocean: radio message: choice = {:02x} / payload = [{}] / sender_id = {:08X} / status = {}".format(choice, ', '.join(['0x%02x' % b for b in payload]), sender_id, status))
+        repeater_cnt = status & 0x0F
+        logger.info("enocean: radio message: choice = {:02x} / payload = [{}] / sender_id = {:08X} / status = {} / repeat = {}".format(choice, ', '.join(['0x%02x' % b for b in payload]), sender_id, status, repeater_cnt))
         
         if (len(optional) == 7):
             subtelnum = optional[0]
@@ -248,9 +251,6 @@ class EnOcean():
             if (data[0] == 0) and (len(data) == 33):
                 logger.info("enocean: Chip ID = 0x{} / Chip Version = 0x{}".format(''.join(['%02x' % b for b in data[9:13]]), ''.join(['%02x' % b for b in data[13:17]])))
                 logger.info("enocean: APP version = {} / API version = {} / App description = {}".format('.'.join(['%d' % b for b in data[1:5]]), '.'.join(['%d' % b for b in data[5:9]]), ''.join(['%c' % b for b in data[17:33]])))
-                if (self.tx_id == 0):
-                    self.tx_id = int.from_bytes(data[9:13], byteorder='big', signed=False)
-                    logger.info("enocean: Transmit ID set set automatically by chip reading chip id") 
             elif (data[0] == 0) and (len(data) == 0):
                 logger.error("enocean: Reading version: No answer")
             else:
@@ -258,12 +258,25 @@ class EnOcean():
         elif (self._last_cmd_code == CO_RD_IDBASE):
             if (data[0] == 0) and (len(data) == 5):
                 logger.info("enocean: Base ID = 0x{}".format(''.join(['%02x' % b for b in data[1:5]])))
+                if (self.tx_id == 0):
+                    self.tx_id = int.from_bytes(data[1:5], byteorder='big', signed=False)
+                    logger.info("enocean: Transmit ID set set automatically by reading chips BaseID") 
                 if (len(optional) == 1):
                     logger.info("enocean: Remaining write cycles for Base ID = {}".format(optional[0]))
             elif (data[0] == 0) and (len(data) == 0):
                 logger.error("enocean: Reading Base ID: No answer")
             else:
                 logger.error("enocean: Reading Base ID returned code = {}".format(RETURN_CODES[data[0]]))
+        elif (self._last_cmd_code == CO_WR_BIST):
+            if (data[0] == 0) and (len(data) == 2):
+                if (data[1] == 0):
+                    logger.info("enocean: built in self test result: All OK")
+                else:
+                    logger.info("enocean: built in self test result: Problem, code = {}".format(data[1]))
+            elif (data[0] == 0) and (len(data) == 0):
+                logger.error("enocean: Doing built in self test: No answer")
+            else:
+                logger.error("enocean: Doing built in self test returned code = {}".format(RETURN_CODES[data[0]]))
         elif (self._last_cmd_code == CO_RD_LEARNMODE):
             if (data[0] == 0) and (len(data) == 2):
                 logger.info("enocean: Reading LearnMode = 0x{}".format(''.join(['%02x' % b for b in data[1]])))
@@ -291,10 +304,10 @@ class EnOcean():
         # request one time information
         logger.info("enocean: resetting device")
         self._send_common_command(CO_WR_RESET)
-        logger.info("enocean: requesting version information")
-        self._send_common_command(CO_RD_VERSION)
         logger.info("enocean: requesting id-base")
         self._send_common_command(CO_RD_IDBASE)
+        logger.info("enocean: requesting version information")
+        self._send_common_command(CO_RD_VERSION)        
         logger.debug("enocean: ending connect-thread")
                
     def run(self):
@@ -391,12 +404,16 @@ class EnOcean():
                 if isinstance(item.conf['enocean_tx_eep'], str):
                     tx_eep = item.conf['enocean_tx_eep']
                     logger.debug('enocean: item has tx_eep')
+                    id_offset = 0
+                    if 'enocean_tx_id_offset' in item.conf and (isinstance(item.conf['enocean_tx_id_offset'], str)):
+                        logger.debug('enocean: item has valid enocean_tx_id_offset')
+                        id_offset = int(item.conf['enocean_tx_id_offset'])
                     if (isinstance(item(), bool)):
                     #if item.conf['type'] == bool:
                         #if isinstance(item, bool):
                         logger.debug('enocean: item is bool type')
                         if( item() == False):
-                            self.send_dim(0, 0)
+                            self.send_dim(id_offset, 0, 0)
                             logger.debug('enocean: sent off command')
                         else:
                             if 'ref_level' in item.level.conf:
@@ -405,12 +422,12 @@ class EnOcean():
                             else:
                                 dim_value = 100
                                 logger.debug('enocean: no ref_level found. Setting to default 100')
-                            self.send_dim(dim_value, 0)
+                            self.send_dim(id_offset, dim_value, 0)
                             logger.debug('enocean: sent dim on command') 
                     else:
                     #elif item.conf['type'] == num:
                         logger.debug('enocean: item is num type')
-                        self.send_dim(item(), 0)
+                        self.send_dim(id_offset, item(), 0)
                         logger.debug('enocean: sent dim command')
                 else:
                     logger.error('enocean: tx_eep is not a string value')
@@ -433,6 +450,10 @@ class EnOcean():
     def reset_stick(self):
         logger.info("enocean: resetting device")
         self._send_common_command(CO_WR_RESET)
+
+    def send_bit(self):
+        logger.info("enocean: trigger Built-In Self Test telegram")
+        self._send_common_command(CO_WR_BIST)
 
     def version(self):
         logger.info("enocean: request stick version")
@@ -466,33 +487,37 @@ class EnOcean():
         self._response_lock.release()
         self._cmd_lock.release()
 
-    def _send_radio_packet(self, _code, data=[], optional=[]):
-        # to do: self.tx_id
+    def _send_radio_packet(self, id_offset, _code, data=[], optional=[]):
+        if (id_offset < 0) or (id_offset > 127):
+            logger.error("enocean: invalid base ID offset range. (Is {}, must be [0 127])".format(id_offset))
+            return
         self._cmd_lock.acquire()
         self._last_cmd_code = SENT_RADIO_PACKET
-        #self._send_packet(PACKET_TYPE_RADIO, [_code] + data + [0x01,0x87,0xf4,0x80] + [0x00], optional)
-        self._send_packet(PACKET_TYPE_RADIO, [_code] + data + list(self.tx_id.to_bytes(4, byteorder='big')) + [0x00], optional)
+        self._send_packet(PACKET_TYPE_RADIO, [_code] + data + list((self.tx_id + id_offset).to_bytes(4, byteorder='big')) + [0x00], optional)
         self._response_lock.acquire()
         # wait 5sec for response
         self._response_lock.wait(5)
         self._response_lock.release()
         self._cmd_lock.release()
 
-    def send_dim(self, dim=0, dimspeed=0):
+    def send_dim(self,id_offset=0, dim=0, dimspeed=0):
         if (dimspeed < 0) or (dimspeed > 255):
             logger.error("enocean: sending dim command A5_38_08: invalid range of dimspeed")
             return
         logger.debug("enocean: sending dim command A5_38_08")
         if (dim == 0):
-            self._send_radio_packet(0xA5, [0x02, 0x00, dimspeed, 0x08])
+            self._send_radio_packet(id_offset, 0xA5, [0x02, 0x00, dimspeed, 0x08])
         elif (dim > 0) and (dim <= 100):
-            self._send_radio_packet(0xA5, [0x02, dim, dimspeed, 0x09])
+            self._send_radio_packet(id_offset, 0xA5, [0x02, dim, dimspeed, 0x09])
         else:
             logger.error("enocean: sending command A5_38_08: invalid dim value")
 
-    def send_learn(self):
+    def send_learn(self, id_offset=0):
+        if (id_offset < 0) or (id_offset > 127):
+            logger.error("enocean: ID offset out of range (0-127). Aborting.")
+            return
         logger.info("enocean: sending learn telegram")
-        self._send_radio_packet(0xA5, [0x02, 0x00, 0x00, 0x00])
+        self._send_radio_packet(id_offset, 0xA5, [0x02, 0x00, 0x00, 0x00])
         
     def _calc_crc8(self, msg, crc=0):
         for i in msg:
