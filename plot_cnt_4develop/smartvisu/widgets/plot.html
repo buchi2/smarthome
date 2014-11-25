@@ -32,6 +32,7 @@
 * @param the mode: 'avg', 'sum', 'min', 'max'
 * @param the minimum time (x-axis): '1h', '2h'... (duration-format)
 * @param the maximum time (x-axis): '', '1h', '2h'... (duration-format, default: now)
+* @param the sample count (optional): default is 100
 * @param the minimum y-axis (optional)
 * @param the maximum y-axis (optional)
 * @param the step between two time-points (optional, only for 'offline'-driver)
@@ -63,6 +64,7 @@
 * @param the mode: 'avg', 'sum', 'min', 'max'
 * @param the minimum time (x-axis): '1h', '2h'... (duration-format)
 * @param the maximum time (x-axis): '', '1h', '2h'... (duration-format, default: now)
+* @param the sample count (optional): default is 100
 * @param the minimum y-axis: Array format, left/right axis [10 0] would be 10 on left 0 on right axis
 * @param the maximum y-axis: Array format, left/right axis [10 0] would be 10 on left 0 on right axis
 * @param the step between two time-points (optional, only for 'offline'-driver)
@@ -96,11 +98,13 @@ class="plot"></div>
 * @param series of a gad/item for the actual-temperature
 * @param series of a gad/item for the set-temperature
 * @param series of a gad/item for the state of the actor. It is shown as percental value within the pie. (> 0 is considered as 'on')
+* @param the sample count (optional): default is 100
 */
-{% macro rtr(id, gad_actual, gad_set, gad_state) %}
+{% macro rtr(id, gad_actual, gad_set, gad_state, count) %}
 
-	<div id="{{ uid(page, id) }}" data-widget="plot.rtr" data-item="{{ implode([gad_actual, gad_set, gad_state], ['avg', '1d', 0]) }}"
+	<div id="{{ uid(page, id) }}" data-widget="plot.rtr" data-item="{{ implode([gad_actual, gad_set, gad_state], ['avg', '1d', 'now', count|default(100) ]) }}"
 		data-step="50" data-label="{{ lang('plot.rtr', 'label') }}" data-axis="{{ lang('plot.rtr', 'axis') }}"
+		{% if count is not empty %} data-count="{{ count }}" {% endif %}
 		class="plot"></div>
 
 {% endmacro %}

@@ -862,12 +862,17 @@ $(document).delegate('div[data-widget="plot.rtr"]', {
 	},
 
 	'point': function (event, response) {
+		var count = $(this).attr('data-count');
+		if (count < 100) {
+			count = 100;
+		}
+
 		for (var i = 0; i < response.length; i++) {
 			var chart = $('#' + this.id).highcharts();
 
 			if (response[i] && (i == 0 || i == 1)) {
 				for (var j = 0; j < response[i].length; j++) {
-					chart.series[i].addPoint(response[i][j], false, (chart.series[i].data.length >= 100));
+					chart.series[i].addPoint(response[i][j], false, (chart.series[i].data.length >= count));
 				}
 			}
 			else if (response[i] && (i == 2)) {
