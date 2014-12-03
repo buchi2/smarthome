@@ -67,7 +67,7 @@ Example item.conf
 			enocean_rx_key = STAT
 			visu_acl = rw
 			enforce_updates = true
-			enocean_tx_eep = A5_38_08
+			enocean_tx_eep = A5_38_08_02
 			enocean_tx_id_offset = 1
 			[[[[level]]]]
 				type = num
@@ -75,7 +75,7 @@ Example item.conf
 				enocean_rx_key = D
 				visu_acl = rw
 				enforce_updates = true
-				enocean_tx_eep = A5_38_08
+				enocean_tx_eep = A5_38_08_03
 				enocean_tx_id_offset = 1
 				ref_level = 80
 	[[handle]]
@@ -98,7 +98,7 @@ Example item.conf
         		enocean_rx_key = VALUE
         		enforce_updates = true
         		visu_acl = ro  
-  	[[actor12]]
+  	[[actor1B]]
     		enocean_rx_id = FFAABBCD
     		enocean_rx_eep = F6_02_03
     		enforce_updates = true
@@ -107,7 +107,7 @@ Example item.conf
         		enocean_rx_key = B
         		visu_acl = rw   
         		enforce_updates = true
-        		enocean_tx_eep = A5_38_08
+        		enocean_tx_eep = A5_38_08_01
         		enocean_tx_id_offset = 2
 
 </pre> 
@@ -123,4 +123,12 @@ F6_10_00	Mechanical Handle
 
 A5_11_04	Dimmer status feedback
 A5_12_01	Power Measurement
-A5_38_08	to do...
+
+Send Commands: Tx EEPs
+=
+
+A5_38_08_01	Regular switch actor command (on/off)
+A5_38_08_02	Dimmer command with fix on off command (on: 100, off:0)
+A5_38_08_03	Dimmer command with specified dim level (0-100)
+
+
