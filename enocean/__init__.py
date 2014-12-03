@@ -81,11 +81,12 @@ class EnOcean():
             logger.warning('enocean: No valid enocean stick ID configured. Transmitting is not supported')
         else:
             self.tx_id = int(tx_id,16)  
-            logger.info('enocean: Stick TX ID configured to: {0}'.format(tx_id))
+            logger.info('enocean: Stick TX ID configured via plugin.conf to: {0}'.format(tx_id))
         self._tcm = serial.Serial(serialport, 57600, timeout=0.5)
         self._cmd_lock = threading.Lock()
         self._response_lock = threading.Condition()
         self._rx_items = {}
+        self._block_ext_out_msg = False
 
     def _parse_eep_A5_3F_7F(self, payload):
         #logger.debug("enocean: processing A5_3F_7F")
@@ -98,6 +99,7 @@ class EnOcean():
     def _parse_eep_A5_12_01(self, payload):
         # Status command from switche actor with powermeter, for example eltako FSVA-230, RORG = 0x07
         logger.debug("enocean: processing A5_12_01")
+        results = {}
         status = payload[3]
         value = (payload[0] << 16) + (payload[1] << 8) + payload[2]
         results['VALUE'] = value 
@@ -138,7 +140,6 @@ class EnOcean():
             results['STATUS']   = 2
         else:
             logger.error("enocean: error in F6_10_00 handle status")
-
         return results
         
     # fuer MarcoLanghans
@@ -234,7 +235,7 @@ class EnOcean():
                         rx_key = item.conf['enocean_rx_key'].upper()
                         if rx_key in results:
                             item(results[rx_key], 'EnOcean', "{:08X}".format(sender_id))
-        elif (sender_id == self.tx_id):
+        elif (sender_id <= self.tx_id+127) and (sender_id >= self.tx_id):
             logger.debug("enocean: Received repeated enocean stick message")
         else:
             logger.info("unknown ID = {:08X}".format(sender_id))
@@ -400,6 +401,9 @@ class EnOcean():
     def update_item(self, item, caller=None, source=None, dest=None):
         if caller != 'EnOcean':
             logger.debug('enocean: item updated externally')
+            if self._block_ext_out_msg == True:
+                logger.debug('enocean: sending manually blocked by user. Aborting')
+                return
             if 'enocean_tx_eep' in item.conf:
                 if isinstance(item.conf['enocean_tx_eep'], str):
                     tx_eep = item.conf['enocean_tx_eep']
@@ -408,10 +412,12 @@ class EnOcean():
                     if 'enocean_tx_id_offset' in item.conf and (isinstance(item.conf['enocean_tx_id_offset'], str)):
                         logger.debug('enocean: item has valid enocean_tx_id_offset')
                         id_offset = int(item.conf['enocean_tx_id_offset'])
-                    if (isinstance(item(), bool)):
+                    #if (isinstance(item(), bool)):
                     #if item.conf['type'] == bool:
+                    #Identify send command based on tx_eep coding:
+                    if(tx_eep == 'A5_38_08_02'):
                         #if isinstance(item, bool):
-                        logger.debug('enocean: item is bool type')
+                        logger.debug('enocean: item is A5_38_08_02 type')
                         if( item() == False):
                             self.send_dim(id_offset, 0, 0)
                             logger.debug('enocean: sent off command')
@@ -424,11 +430,16 @@ class EnOcean():
                                 logger.debug('enocean: no ref_level found. Setting to default 100')
                             self.send_dim(id_offset, dim_value, 0)
                             logger.debug('enocean: sent dim on command') 
-                    else:
-                    #elif item.conf['type'] == num:
-                        logger.debug('enocean: item is num type')
+                    elif(tx_eep == 'A5_38_08_03'):
+                        logger.debug('enocean: item is A5_38_08_03 type')
                         self.send_dim(id_offset, item(), 0)
                         logger.debug('enocean: sent dim command')
+                    elif(tx_eep == 'A5_38_08_01'):
+                        logger.debug('enocean: item is A5_38_08_01 type')
+                        self.send_switch(id_offset, item(), 0)
+                        logger.debug('enocean: sent switch command')
+                    else:
+                        logger.error('enocean: error: Unknown tx eep command')
                 else:
                     logger.error('enocean: tx_eep is not a string value')
             else:
@@ -450,6 +461,16 @@ class EnOcean():
     def reset_stick(self):
         logger.info("enocean: resetting device")
         self._send_common_command(CO_WR_RESET)
+
+    def block_external_out_messages(self, block=True):
+        if(block == True):
+            logger.info("enocean: Blocking of external out messages activated")
+            self._block_ext_out_msg = True
+        elif(block == False):
+            logger.info("enocean: Blocking of external out messages deactivated")
+            self._block_ext_out_msg = False
+        else:
+            logger.info("enocean: invalid argument. Must be True/False")
 
     def send_bit(self):
         logger.info("enocean: trigger Built-In Self Test telegram")
@@ -512,12 +533,31 @@ class EnOcean():
         else:
             logger.error("enocean: sending command A5_38_08: invalid dim value")
 
-    def send_learn(self, id_offset=0):
+    def send_switch(self,id_offset=0, on=0, block=0):
+        if (block < 0) and (block > 1):
+            logger.error("enocean: sending switch command A5_38_08: invalid range of block (0,1)")
+            return
+        logger.debug("enocean: sending switch command A5_38_08")
+        if (on == 0):
+            self._send_radio_packet(id_offset, 0xA5, [0x01, 0x00, 0x00, 0x08])
+        elif (on == 1) and (block == 0):
+            self._send_radio_packet(id_offset, 0xA5, [0x01, 0x00, 0x00, 0x09])
+        else:
+            logger.error("enocean: sending command A5_38_08: error")
+
+    def send_learn_dim(self, id_offset=0):
         if (id_offset < 0) or (id_offset > 127):
             logger.error("enocean: ID offset out of range (0-127). Aborting.")
             return
-        logger.info("enocean: sending learn telegram")
+        logger.info("enocean: sending learn telegram for dim command")
         self._send_radio_packet(id_offset, 0xA5, [0x02, 0x00, 0x00, 0x00])
+
+    def send_learn_switch(self, id_offset=0):
+        if (id_offset < 0) or (id_offset > 127):
+            logger.error("enocean: ID offset out of range (0-127). Aborting.")
+            return
+        logger.info("enocean: sending learn telegram for switch command")
+        self._send_radio_packet(id_offset, 0xA5, [0x01, 0x00, 0x00, 0x00])
         
     def _calc_crc8(self, msg, crc=0):
         for i in msg:
