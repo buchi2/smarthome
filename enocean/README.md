@@ -33,7 +33,7 @@ Configure items
   
 According to the plugin implementation of the enocean-devices you have to specify at least a enocean-id (enocean serial number in format 01:a2:f3:2d), the correct enocean-rorg-code and an enocean-value. 
    
-The following example is for a rocker/switch with two rocker and 6 available combinations.  
+The following example is for a rocker/switch with two rocker and 6 available combinations (EEP F6_02_02).  
 left rocker down = A1  
 left rocker up = A0  
 right rocker down = B1   
@@ -44,19 +44,22 @@ both rockers up = A0B0
 Mechanical handle example:
 handle_status = STATUS
 
-
-<pre>
-[A1]
-type = bool
-enforce_updates = true
-enocean_id = 00:22:60:37
-enocean_rorg = F6_02_02
-enocean_value = A1
-</pre>
-
 Example item.conf
 =
 <pre>
+	[[FT55switch]]
+		enocean_rx_id = 012345AA
+		enocean_rx_eep = F6_02_03
+    [[[up]]]
+        type = bool
+        enocean_rx_key = B0
+        visu_acl = ro
+        enforce_updates = true
+    [[[down]]]
+        type = bool
+        enocean_rx_key = B1
+        visu_acl = ro   
+        enforce_updates = true
 	[[dimmer1]]
 		enocean_rx_id = 00112233
 		enocean_rx_eep = A5_11_04
@@ -118,7 +121,7 @@ You have to know about the EnOcean RORG of your device, so pleas ask Mr.Google o
 
 F6_02_02	2-Button-Rocker
 
-F6_02_03	2-Button-Rocker, Status feedback from manual buttons on different actors.
+F6_02_03	2-Button-Rocker, Status feedback from manual buttons on different actors. Z.B. Eltako FT55, FSUD-230, FSVA-230V or Gira Switches.
 
 F6_10_00	Mechanical Handle  
 
