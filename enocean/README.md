@@ -31,15 +31,13 @@ That's it!
 Configure items
 =
   
-According to the plugin implementation of the enocean-devices you have to specify at least a enocean-id (enocean serial number in format 01:a2:f3:2d), the correct enocean-rorg-code and an enocean-value. 
-   
 The following example is for a rocker/switch with two rocker and 6 available combinations (EEP F6_02_02).  
 left rocker down = A1  
 left rocker up = A0  
 right rocker down = B1   
 right rocker up = B0  
-last state of left rocker = A
-last state of right rocker = B
+last state of left rocker = A  
+last state of right rocker = B  
 
 Mechanical handle example:
 handle_status = STATUS
@@ -47,6 +45,7 @@ handle_status = STATUS
 Example item.conf
 =
 <pre>
+[Enocean]
 	[[Door]]
 		enocean_rx_id = 01234567
 		enocean_rx_eep = D5_00_01
