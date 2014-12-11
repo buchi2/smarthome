@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # vim: set encoding=utf-8 tabstop=4 softtabstop=4 shiftwidth=4 expandtab
-#V1.3
+#V1.4
 
 import serial
 import os
@@ -103,6 +103,19 @@ class EnOcean():
         status = payload[3]
         value = (payload[0] << 16) + (payload[1] << 8) + payload[2]
         results['VALUE'] = value 
+        return results
+
+    def _parse_eep_D5_00_01(self, payload):
+        #ORG = 0x06
+        #Window/Door Contact Sensor, for example Eltako FTK, FTKB
+        logger.debug("enocean: processing D5_00_01: Door contact")
+        results = {}
+        #door/window closed
+        if (payload[0] == 0x09):
+            results['STATUS'] = False 
+        #door/window open
+        elif (payload[0] == 0x08):
+            results['STATUS'] = True 
         return results
 
     def _parse_eep_F6_02_03(self, payload):

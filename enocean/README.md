@@ -47,19 +47,28 @@ handle_status = STATUS
 Example item.conf
 =
 <pre>
+	[[Door]]
+		enocean_rx_id = 01234567
+		enocean_rx_eep = D5_00_01
+		[[[status]]]
+			type = bool
+			enocean_rx_key = STATUS
+			visu_acl = ro
+			cache = True
+			enforce_updates = true
 	[[FT55switch]]
 		enocean_rx_id = 012345AA
 		enocean_rx_eep = F6_02_03
-    [[[up]]]
-        type = bool
-        enocean_rx_key = B0
-        visu_acl = ro
-        enforce_updates = true
-    [[[down]]]
-        type = bool
-        enocean_rx_key = B1
-        visu_acl = ro   
-        enforce_updates = true
+        	[[[up]]]
+			type = bool
+           		enocean_rx_key = B0
+        		visu_acl = ro
+        		enforce_updates = true
+    		[[[down]]]
+        		type = bool
+        		enocean_rx_key = B1
+        		visu_acl = ro   
+        		enforce_updates = true
 	[[dimmer1]]
 		enocean_rx_id = 00112233
 		enocean_rx_eep = A5_11_04
@@ -121,13 +130,15 @@ You have to know about the EnOcean RORG of your device, so pleas ask Mr.Google o
 
 F6_02_02	2-Button-Rocker
 
-F6_02_03	2-Button-Rocker, Status feedback from manual buttons on different actors. Z.B. Eltako FT55, FSUD-230, FSVA-230V or Gira Switches.
+F6_02_03	2-Button-Rocker, Status feedback from manual buttons on different actors, e.g. Eltako FT55, FSUD-230, FSVA-230V or Gira switches.
 
 F6_10_00	Mechanical Handle  
 
 A5_11_04	Dimmer status feedback
 
 A5_12_01	Power Measurement
+
+D5_00_01	Door/Window Contact, e.g. Eltako FTK, FTKB
 
 Send commands: Tx EEPs
 =
