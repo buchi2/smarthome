@@ -38,8 +38,8 @@ left rocker down = A1
 left rocker up = A0  
 right rocker down = B1   
 right rocker up = B0  
-both rockers down = A1B1   
-both rockers up = A0B0   
+last state of left rocker = A
+last state of right rocker = B
 
 Mechanical handle example:
 handle_status = STATUS
