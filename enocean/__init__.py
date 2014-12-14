@@ -168,7 +168,8 @@ class EnOcean():
         return results
     
     def _parse_eep_F6_02_02(self, payload):
-        results = {'A1': (payload[0] == 16), 'A0': (payload[0] == 48), 'B1': (payload[0] == 80), 'B0': (payload[0] == 112), 'A1B1': (payload[0] == 21), 'A0B0': (payload[0] == 21)}
+        logger.debug("enocean: processing F6_02_02: Rocker Switch, 2 Rocker")
+        results = {'A1': (payload[0] == 16), 'A0': (payload[0] == 48), 'B1': (payload[0] == 80), 'B0': (payload[0] == 112), 'A1B1': (payload[0] == 21), 'A0B0': (payload[0] == 55)}
         return results
 
     def _parse_eep_A5_11_04(self, payload):
