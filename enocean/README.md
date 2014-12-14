@@ -31,7 +31,16 @@ That's it!
 Configure items
 =
   
-The following example is for a rocker/switch with two rocker and 6 available combinations (EEP F6_02_02).  
+ The following example is for a rocker/switch with two rocker and 6 available combinations (EEP F6_02_02).  
+left rocker down = A1  
+left rocker up = A0  
+right rocker down = B1   
+right rocker up = B0  
+both rockers up = A1B1  
+both rockers down = A0B0  
+  
+  
+The following example is for a rocker/switch with two rocker and 6 available combinations (EEP F6_02_03).  
 left rocker down = A1  
 left rocker up = A0  
 right rocker down = B1   
