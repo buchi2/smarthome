@@ -932,6 +932,89 @@ $(document).delegate('div[data-widget="plot.temprose"]', {
 	}
 });
 
+// ----- plot.stacked ----------------------------------------------------------
+$(document).delegate('div[data-widget="plot.stacked"]', {
+	'update': function (event, response) {
+		// response is: [ [ [t1, y1], [t2, y2] ... ], [ [t1, y1], [t2, y2] ... ], ... ] 
+
+		var label = $(this).attr('data-label').explode();
+		var color = $(this).attr('data-color').explode();
+		var exposure = $(this).attr('data-exposure').explode();
+		var axis = $(this).attr('data-axis').explode();
+		var zoom = $(this).attr('data-zoom');
+		var showStacklabels = JSON.parse($(this).attr('data-stacklabels'));
+		var correctdate = JSON.parse($(this).attr('data-correctdate'));
+		var series = Array();
+
+		for (var i = 0; i < response.length; i++) {
+		    // 1) werte werden um Mitternacht für den Vortag generiert, Anzeige von Highcharts auf dem Folgetag, ABzug von 24h in millisekunden
+		    // 2) timestamp is in milliseconds, harmonize last 3 figures to 000
+		    // sollte also hiermit auf 10sec "ungenau" werden => notwendig für gruppierung von highcharts
+            // 3) remove last value as it is a during the day value 
+		    var oneResponse = response[i]; // [[1420526954593,0],[1420554301019,6.21],[1420585202298,6.7],[1420671601499,7.4],[1420671601527,7.12],[1420747423682,7.12]]
+    		for (var k = 0; k < oneResponse.length; k++) {
+    		    var timestamp = oneResponse[k][0];
+    		    // 1)
+    		    if (correctdate) {
+        		    timestamp = timestamp - 1000 * 60 * 60 * 24;
+        		}
+    		    // 2)
+    		    var newTimestamp = timestamp.toString().substring(0, 9).concat('0000'); 
+                oneResponse[k][0] = parseInt(newTimestamp);
+            }
+            oneResponse.pop(); // 3) 
+            response[i] = oneResponse; 
+
+			series[i] = {
+				type: (exposure[i] != 'stair' ? exposure[i] : 'line'),
+				step: (exposure[i] == 'stair' ? 'left' : false),
+				name: label[i],
+				data: response[i],
+				color: (color[i] ? color[i] : null)
+			}
+		}
+		
+
+		// draw the plot
+
+        $('#' + this.id).highcharts({
+				chart: { type: 'column' },
+				series: series,
+				xAxis: { type: 'datetime', title: { text: axis[0] } },
+				yAxis: { min: $(this).attr('data-ymin'), max: $(this).attr('data-ymax'), title: { text: axis[1] }, stackLabels: { 
+				    enabled: showStacklabels, 
+				    style: { color: '#fff', 'font-size': '13px', 'line-height': '14px' } } 
+				    },
+                plotOptions: {
+                    column: {
+                        stacking: 'normal',
+                        dataLabels: { enabled: false }
+                    }
+                }
+        });
+		
+	},
+
+	'point': function (event, response) {
+
+		var count = $(this).attr('data-count');
+		if (count < 100) {
+			count = 100;
+		}
+		for (var i = 0; i < response.length; i++) {
+			if (response[i]) {
+				var chart = $('#' + this.id).highcharts();
+
+				// more points?
+				for (var j = 0; j < response[i].length; j++) {
+					chart.series[i].addPoint(response[i][j], false, (chart.series[i].data.length >= count));
+				}
+				chart.redraw();
+			}
+		}
+	}
+});
+
 
 // ----- s t a t u s -----------------------------------------------------------
 // -----------------------------------------------------------------------------

@@ -131,3 +131,34 @@ class="plot"></div>
 		class="plot"></div>
 
 {% endmacro %}
+
+/**
+* A simple widget for plotting stacked charts
+*
+* @param unique id for this widget
+* @param series of item/s. More item/s in array form: [ item1 , item2 ]
+* @param the mode: 'avg', 'sum', 'min', 'max'
+* @param the minimum time (x-axis): '1h', '2h'... (duration-format)
+* @param the maximum time (x-axis): '', '1h', '2h'... (duration-format, default: now)
+* @param the minimum y-axis (optional)
+* @param the maximum y-axis (optional)
+* @param label/s for each series (optional)
+* @param stacklabel if the aggregated values should be shown, true/false (optional, default true)
+* @param color/s for each series e. g. '#f00' for red (optional, default: sutiable for design)
+* @param type/s for each series (exposure): 'line', 'stair', 'spline', 'area', 'areaspline', 'column' (optional, default 'line')
+* @param count number of data points to load, default 100
+* @param correctdate whether to delete last data point (if stats from previous
+*
+* @see misc/fundamentals#Array-Form
+* @see misc/fundamentals#Duration-Format
+*/
+{% macro stacked(id, gad, mode, tmin, tmax, ymin, ymax, label, stacklabels, color, exposure, count, correctdate) %}
+
+	<div id="{{ uid(page, id) }}" data-widget="plot.stacked" data-item="{{ implode(gad, [mode|default('avg'), tmin|default('1h'), tmax|default('now')]) }}"
+		{% if ymin is not empty %} data-ymin="{{ ymin }}" {% endif %} {% if ymax is not empty %} data-ymax="{{ ymax }}" {% endif %}
+		data-label="{{ implode(label) }}" data-stacklabels="{{ stacklabels|default(true) }}" data-correctdate="{{ correctdate|default('false') }}"
+		data-color="{{ implode(color) }}" data-exposure="{{ implode(exposure) }}" data-axis="{{ implode(axes) }}"
+		{% if count is not empty %} data-count="{{ count }}" {% endif %}
+		class="plot"></div>
+
+{% endmacro %}
