@@ -2,17 +2,25 @@
  * -----------------------------------------------------------------------------
  * @package     smartVISU
  * @author      Martin Gleiß
- * @copyright   2012
+ * @copyright   2012 - 2015
  * @license     GPL [http://www.gnu.de]
  * -----------------------------------------------------------------------------
  */
 
-
-// ----------------------------------------------------------------------------
-// W I D G E T   F U N C T I O N S
-// ----------------------------------------------------------------------------
-
 /**
+ * Class for controlling all widgets.
+ *
+ * Concept:
+ * --------
+ * Every item has a name. The value of the item may be of type: int, float, or
+ * array. The items are stored in the widget.buffer. The drivers will fill the
+ * buffer through the widget.update (and therefore widget.set). Asynchronly
+ * all widgets on a page may be updated. The update is been triggerd from
+ * widget.update, if a item has been changed. Updates are only made if all
+ * items are in buffer needed for that update. If one is missing the update is
+ * not been made. If some plots placed on the page, the update will look if it
+ * is possible to add only one point (if the widget is already initialized).
+ *
  * Events:
  * -------
  * Some new events are introduced to control the widgets and there visual
@@ -50,14 +58,14 @@ $(document).delegate('a[data-widget="basic.button"]', {
 	}
 });
 
-// ----- basic.checkbox -------------------------------------------------------
+// ----- basic.checkbox --------------------------------------------------------
 $(document).delegate('input[data-widget="basic.checkbox"]', {
 	'update': function (event, response) {
 		$(this).prop('checked', response != 0).checkboxradio('refresh');
 	},
 
 	'change': function (event) {
-		// DEBUG: console.log("[basic.checkbox] change '" + this.id + "':", $(this).prop("checked")); 
+		// DEBUG: console.log("[basic.checkbox] change '" + this.id + "':", $(this).prop("checked"));
 		io.write($(this).attr('data-item'), ($(this).prop('checked') ? 1 : 0));
 	}
 });
@@ -220,6 +228,37 @@ $(document).delegate('a[data-widget="basic.dual"]', {
 	}
 });
 
+// ----- basic.multistate ------------------------------------------------------
+$(document).delegate('a[data-widget="basic.multistate"]', {
+    'update': function (event, response) {
+        // get list of values and images
+        list_val=$(this).attr('data-vals').explode();
+        list_img = $(this).attr('data-img').explode();
+        // get the index of the value received
+        idx = list_val.indexOf(response.toString());
+        // update the image
+        $('#' + this.id + ' img').attr('src', list_img[idx]);
+        // memorise the index for next use
+        $(this).attr('index-mem', idx);
+    },
+    'click': function(event) {
+        // get the list of values
+        list_val=$(this).attr('data-vals').explode();
+        // get the last index memorised
+        old_idx=parseInt($(this).attr('index-mem'));
+        //compute the next index
+        var new_idx = old_idx + 1;
+        if (new_idx>=list_val.length)
+        {
+            new_idx=0;
+        }
+        // send the value to driver
+        io.write($(this).attr('data-item'), list_val[new_idx]);
+        // memorise the index for next use
+        $(this).attr('index-mem', new_idx);
+    }
+});
+
 // ----- basic.flip -----------------------------------------------------------
 $(document).delegate('select[data-widget="basic.flip"]', {
 	'update': function (event, response) {
@@ -227,7 +266,7 @@ $(document).delegate('select[data-widget="basic.flip"]', {
 	},
 
 	'change': function (event) {
-		// DEBUG: console.log("[basic.flip] change '" + this.id + "':", $(this).val());  
+		// DEBUG: console.log("[basic.flip] change '" + this.id + "':", $(this).val());
 		io.write($(this).attr('data-item'), ($(this).val() == 'on' ? 1 : 0));
 	}
 });
@@ -252,36 +291,42 @@ $(document).delegate('[data-widget="basic.formula"]', {
 		var pos = 0;
 		var unit = $(this).attr('data-unit');
 		var mode = $(this).attr('data-formula').substring(0, 3); // functions SUM, AVG, SUB only used, if they are the first 3 chars in formula string
+		var formula = $(this).attr('data-formula');
 
-		if (unit == 'time') {
+		if (unit == 'date' || unit == 'time' || unit == 'short' || unit == 'long') {
 			var date = new Date(response[0]);
-			$("#" + this.id).html(date.transTime());
-		}
-		else if (unit == 'short') {
-			var date = new Date(response[0]);
-			$("#" + this.id).html(date.transShort());
+			$("#" + this.id).html(date.transUnit(unit));
 		}
 		else {
-			if (mode == 'SUB') {
-				calc = response[pos];
-				pos++;
+			if (formula.indexOf('VAR1') > -1) {
+				for (var i = 0; i < response.length; i++) {
+					var myVar = 'VAR' + (i + 1);
+					formula = eval('formula.replace(/' + myVar + '/g, response[i]);');
+				}
+				calc = eval(formula);
 			}
-
-			for (var i = pos; i < response.length; i++) {
+			else {
 				if (mode == 'SUB') {
-					calc = calc - response[i];
+					calc = response[pos];
+					pos++;
 				}
-				else {
-					calc = calc + response[i];
+
+				for (var i = pos; i < response.length; i++) {
+					if (mode == 'SUB') {
+						calc = calc - response[i];
+					}
+					else {
+						calc = calc + response[i];
+					}
 				}
-			}
 
-			if (mode == 'AVG') {
-				calc = calc / i;
-			}
+				if (mode == 'AVG') {
+					calc = calc / i;
+				}
 
-			if (mode != '') {
-				calc = eval($(this).attr('data-formula').replace(/VAR/g, calc).replace(/AVG/g, '').replace(/SUM/g, '').replace(/SUB/g, ''));
+				if (mode != '') {
+					calc = eval(formula.replace(/VAR/g, calc).replace(/AVG/g, '').replace(/SUM/g, '').replace(/SUB/g, ''));
+				}
 			}
 
 			$("#" + this.id).html(parseFloat(calc).transUnit(unit));
@@ -323,18 +368,15 @@ $(document).delegate('div[data-widget="basic.rgb-popup"] > div', {
 	}
 });
 
-// ----- basic.shifter --------------------------------------------------------
+// ----- basic.shifter ---------------------------------------------------------
 $(document).delegate('span[data-widget="basic.shifter"]', {
 	'update': function (event, response) {
 		// response is: {{ gad_value }}, {{ gad_switch }}
 
 		var step = Math.min((response[0] / $(this).attr('data-max') * 10 + 0.49).toFixed(0) * 10, 100);
 
-		if (step > 0 && response[1] != 0) {
+		if (response[1] != 0 && step > 0) {
 			$('#' + this.id + ' img').attr('src', $(this).attr('data-pic-on').replace('00', step));
-		}
-		else if (step > 0 && $(this).attr('data-pic-off').substr(-7) == '_00.png') {
-			$('#' + this.id + ' img').attr('src', $(this).attr('data-pic-off').replace('00', step));
 		}
 		else {
 			$('#' + this.id + ' img').attr('src', $(this).attr('data-pic-off'));
@@ -344,8 +386,11 @@ $(document).delegate('span[data-widget="basic.shifter"]', {
 	'click': function (event) {
 		var items = $(this).attr('data-item').explode();
 
-		if (items[1]) {
-			io.write(items[1], (widget.get(items[1]) == 0 ? 1 : 0));
+		if ($('#' + this.id + ' img').attr('src') == $(this).attr('data-pic-off')) {
+			io.write(items[1], 1);
+		}
+		else {
+			io.write(items[1], 0);
 		}
 	}
 });
@@ -359,7 +404,7 @@ $(document).delegate('span[data-widget="basic.shifter"] > a > img', 'hover', fun
 	}
 });
 
-// ----- basic.shutter --------------------------------------------------------
+// ----- basic.shutter ---------------------------------------------------------
 $(document).delegate('div[data-widget="basic.shutter"]', {
 	'update': function (event, response) {
 		// response is: {{ gad_pos }}, {{ gad_angle }}
@@ -435,7 +480,7 @@ $(document).delegate('div[data-widget="basic.shutter"]', {
 // only every 400ms if it was been moved. There should be no trigger on init.
 $(document).delegate('input[data-widget="basic.slider"]', {
 	'update': function (event, response) {
-		// DEBUG: console.log("[basic.slider] update '" + this.id + "': " + response + " timer: " + $(this).attr('timer') + " lock: " + $(this).attr('lock'));   
+		// DEBUG: console.log("[basic.slider] update '" + this.id + "': " + response + " timer: " + $(this).attr('timer') + " lock: " + $(this).attr('lock'));
 		$(this).attr('lock', 1);
 		$('#' + this.id).val(response).slider('refresh').attr('mem', $(this).val());
 	},
@@ -447,7 +492,7 @@ $(document).delegate('input[data-widget="basic.slider"]', {
 	},
 
 	'change': function (event) {
-		// DEBUG: console.log("[basic.slider] change '" + this.id + "': " + $(this).val() + " timer: " + $(this).attr('timer') + " lock: " + $(this).attr('lock'));   
+		// DEBUG: console.log("[basic.slider] change '" + this.id + "': " + $(this).val() + " timer: " + $(this).attr('timer') + " lock: " + $(this).attr('lock'));
 		if (( $(this).attr('timer') === undefined || $(this).attr('timer') == 0 && $(this).attr('lock') == 0 )
 			&& ($(this).val() != $(this).attr('mem'))) {
 
@@ -463,7 +508,7 @@ $(document).delegate('input[data-widget="basic.slider"]', {
 	},
 
 	'click': function (event) {
-		// $('#' + this.id).attr('mem', $(this).val());       
+		// $('#' + this.id).attr('mem', $(this).val());
 		io.write($(this).attr('data-item'), $(this).val());
 	}
 });
@@ -497,7 +542,7 @@ $(document).delegate('span[data-widget="basic.switch"] > a > img', 'hover', func
 $(document).delegate('span[data-widget="basic.symbol"]', {
 	'update': function (event, response) {
 
-		// response will be an array, if more then one item is requested 
+		// response will be an array, if more then one item is requested
 		var bit = ($(this).attr('data-mode') == 'and');
 		if (response instanceof Array) {
 			for (var i = 0; i < response.length; i++) {
@@ -524,10 +569,12 @@ $(document).delegate('span[data-widget="basic.symbol"]', {
 	}
 });
 
-// ----- basic.tank -----------------------------------------------------------
+// ----- basic.tank ------------------------------------------------------------
 $(document).delegate('div[data-widget="basic.tank"]', {
 	'update': function (event, response) {
-		$('#' + this.id + ' div').css('height', Math.round(Math.min(response / $(this).attr('data-max'), 1) * 180));
+		// $('#' + this.id + ' div').css('height', Math.round(Math.min(response / $(this).attr('data-max'), 1) * 180));
+		$('#' + this.id + ' div').animate({ height: Math.round(Math.min(response / $(this).attr('data-max'), 1) * 180)}, 'slow');
+
 	}
 });
 
@@ -548,7 +595,18 @@ $(document).delegate('a[data-widget="basic.trigger"]', {
 // ----- basic.value ----------------------------------------------------------
 $(document).delegate('[data-widget="basic.value"]', {
 	'update': function (event, response) {
-		$('#' + this.id).html(response + ' ' + $(this).attr('data-unit'));
+		var unit = $(this).attr('data-unit');
+
+		if (unit == 'date' || unit == 'time' || unit == 'short' || unit == 'long') {
+			var date = new Date(response);
+			$("#" + this.id).html(date.transUnit(unit));
+		}
+		else if (unit != '' && $.isNumeric(response)) {
+			$("#" + this.id).html(parseFloat(response).transUnit(unit));
+		}
+		else {
+			$("#" + this.id).html(response);
+		}
 	}
 });
 
@@ -583,6 +641,40 @@ $(document).delegate('span[data-widget="clock.miniclock"]', {
 // ----- d e v i c e ----------------------------------------------------------
 // ----------------------------------------------------------------------------
 
+// ----- device.codepad -------------------------------------------------------
+$(document).delegate('div[data-widget="device.codepad"] > div > a', {
+	'click': function (event, response) {
+		var node = $(this).parent().parent();
+		var code = $('#' + node.attr('id') + ' #code');
+		var key = $(this).attr('data-val');
+
+		if (key == "ok") {
+			if (node.attr('data-val') == code.val()) {
+				// DEBUG: console.log('[device.codepad] ' + node.attr('id') + ' unlocked');
+				$('div[data-bind="' + node.attr('data-id') + '"]').attr('data-access', new Date().getTime()).removeClass('codepad');
+				setTimeout(function () {
+					$('div[data-bind="' + node.attr('data-id') + '"]').attr('data-access', '').addClass('codepad');
+				}, new Date().duration(node.attr('data-duration')).valueOf());
+				node.popup("close");
+			}
+			else {
+				// DEBUG: console.log('[device.codepad] ' + node.attr('id') + ' wrong code ' + code.val());
+				code.val('');
+				$('#' + node.attr('id')).addClass('ui-focus');
+				setTimeout(function () {
+					$('#' + node.attr('id')).removeClass('ui-focus');
+				}, 400);
+			}
+		}
+		else if (key == "-") {
+			code.val('');
+		}
+		else {
+			code.val(code.val() + key);
+		}
+	}
+});
+
 // ----- device.rtr -----------------------------------------------------------
 $(document).delegate('div[data-widget="device.rtr"] > div > a[data-icon="minus"]', {
 	'click': function (event, response) {
@@ -607,8 +699,8 @@ $(document).delegate('div[data-widget="device.rtr"] > div > a[data-icon="plus"]'
 });
 
 
-// ----- p l o t --------------------------------------------------------------
-// ----------------------------------------------------------------------------
+// ----- p l o t ---------------------------------------------------------------
+// -----------------------------------------------------------------------------
 
 // ----- plot.comfortchart ----------------------------------------------------
 $(document).delegate('div[data-widget="plot.comfortchart"]', {
@@ -678,10 +770,147 @@ $(document).delegate('div[data-widget="plot.comfortchart"]', {
 	}
 });
 
+
+// ----- plot.multiaxes ----------------------------------------------------------
+$(document).delegate('div[data-widget="plot.multiaxes"]', {
+	'update': function (event, response) {
+		// response is: [ [ [t1, y1], [t2, y2] ... ], [ [t1, y1], [t2, y2] ... ], ... ] 
+
+		var label = $(this).attr('data-label').explode();
+		var color = $(this).attr('data-color').explode();
+		var exposure = $(this).attr('data-exposure').explode();
+		var axis = $(this).attr('data-axis').explode();
+		var zoom = $(this).attr('data-zoom');
+		var series = [];
+        var yAxes = [];
+
+        var ymin;
+        if ($(this).attr('data-ymin')) {
+            ymin = $(this).attr('data-ymin').explode();
+            } else {
+            ymin = [];
+            }
+
+        var ymax;
+        if ($(this).attr('data-ymax')) {
+            ymax = $(this).attr('data-ymax').explode();
+            } else {
+            ymax = [];
+            }
+                        
+        var hc = [];
+        
+        var yaxisnumber;
+        if ($(this).attr('data-yaxisnumber')) {
+            yaxisnumber = $(this).attr('data-yaxisnumber').explode();
+            } else {
+            yaxisnumber = [];
+            }
+            
+        var yaxisopposite;
+        if ($(this).attr('data-yaxisopposite')) { 
+            yaxisopposite = $(this).attr('data-yaxisopposite').explode();
+            } else {
+            yaxisopposite = [];
+            }
+        var yaxiscolor;
+        if ($(this).attr('data-yaxiscolor')) { 
+            yaxiscolor = $(this).attr('data-yaxiscolor').explode();
+            } else {
+            yaxiscolor = [];
+            } 
+        var i = 0;
+        var n = 0;
+
+		for (i = 0; i < response.length; i++) {
+			series[i] = {
+				type: (exposure[i] != 'stair' ? exposure[i] : 'line'),
+				step: (exposure[i] == 'stair' ? 'left' : false),
+				name: label[i],
+				data: response[i],
+				color: (color[i] ? color[i] : null),
+                yAxis: (yaxisnumber[i] ? parseInt(yaxisnumber[i], 10) : 0),
+                zIndex: 200
+			};
+		}
+
+        // we need the number of user defined yaxes: 
+        // One graph my have serveral series of data but the number of different yaxes might be smaller!
+		for ( i = 0; i < yaxisnumber.length; i++) {
+            n = Math.max(n, parseInt(yaxisnumber[i], 10));
+        }
+        // indices are zero based so we need to increase by one
+        n++;
+        
+        // now limit the number of defined yaxes, it must be smaller than the number of series
+        n = Math.min( n, response.length );
+        
+		for ( i = 0; i < n; i++) {
+			yAxes[i] = {
+                    min: (ymin[i] ? ymin[i] : null),
+                    max: (ymax[i] ? ymax[i] : null),
+                    title: { text: axis[1 + i] }, 
+                    opposite: ( yaxisopposite[i] ? (parseInt(yaxisopposite[i],10) > 0 ? true : false ) : false ),
+                    minPadding: 0.05,
+                    maxPadding: 0.05,
+                    endOnTick: false,
+                    startOnTick: false };
+            if (yaxiscolor[i]) { 
+                    yAxes[i].lineColor = yaxiscolor[i];
+                    yAxes[i].tickColor = yaxiscolor[i];
+                    };
+		}    
+
+		// draw the plot
+		if (zoom) {
+            hc = {
+                chart: { 
+                    zoomType: 'x',
+                    type: 'line'
+                },
+				series: series,
+				xAxis: { type: 'datetime', title: { text: axis[0] }, minRange: new Date().duration(zoom).valueOf() },
+				yAxis: yAxes
+			};
+			$('#' + this.id).highcharts( hc );
+		}
+		else {
+			hc = {
+                chart: { 
+                    type: 'line'
+                },
+				series: series,
+				xAxis: { type: 'datetime', title: { text: axis[0] } },
+				yAxis: yAxes
+			};
+            $('#' + this.id).highcharts(hc);
+		}
+	},
+
+	'point': function (event, response) {
+		var count = $(this).attr('data-count');
+		if (count < 100) {
+			count = 100;
+		}
+		for (var i = 0; i < response.length; i++) {
+			if (response[i]) {
+				var chart = $('#' + this.id).highcharts();
+
+				// more points?
+				for (var j = 0; j < response[i].length; j++) {
+					chart.series[i].addPoint(response[i][j], false, (chart.series[i].data.length >= count));
+				}
+				chart.redraw();
+			}
+		}
+	}
+});
+
+
 // ----- plot.period ----------------------------------------------------------
 $(document).delegate('div[data-widget="plot.period"]', {
 	'update': function (event, response) {
-		// response is: [ [ [t1, y1], [t2, y2] ... ], [ [t1, y1], [t2, y2] ... ], ... ] 
+		// response is: [ [ [t1, y1], [t2, y2] ... ], [ [t1, y1], [t2, y2] ... ], ... ]
 
 		var label = $(this).attr('data-label').explode();
 		var color = $(this).attr('data-color').explode();
@@ -719,7 +948,6 @@ $(document).delegate('div[data-widget="plot.period"]', {
 	},
 
 	'point': function (event, response) {
-
 		var count = $(this).attr('data-count');
 		if (count < 100) {
 			count = 100;
@@ -738,73 +966,10 @@ $(document).delegate('div[data-widget="plot.period"]', {
 	}
 });
 
-// ----- plot.multi_period ----------------------------------------------------------- 
-$(document).delegate('div[data-widget="plot.multi_period"]', { 
-    'update': function (event, response) { 
-        // response is: [ [ [t1, y1], [t2, y2] ... ], [ [t1, y1], [t2, y2] ... ], ... ] 
-
-        var label = $(this).attr('data-label').explode(); 
-        var color = $(this).attr('data-color').explode(); 
-        var exposure = $(this).attr('data-exposure').explode(); 
-        var axis = $(this).attr('data-axis').explode(); 
-        var series = Array(); 
-        var yaxes = Array(); 
-        var ymin = $(this).attr('data-ymin').explode(); 
-        var ymax = $(this).attr('data-ymax').explode(); 
-
-        var axesassign = $(this).attr('data-axesassign').explode(); 
-
-        for (var i = 0; i < response.length; i++) { 
-            series[i] = { 
-                type: (exposure[i] != 'stair' ? exposure[i] : 'line'), 
-                step: (exposure[i] == 'stair' ? 'left' : false), 
-                name: label[i], 
-                data: response[i], 
-                yAxis: axesassign[i]-1, 
-                color: (color[i] ? color[i] : null) 
-            } 
-        } 
-        for (var i = 0; i < ymin.length; i++) { 
-            yaxes[i] = { 
-                min: ymin[i], 
-                max: ymax[i], 
-                title: {text: axis[i+1]}, 
-                opposite: (i > 0) 
-            } 
-        } 
-
-        // draw the plot 
-        $('#' + this.id).highcharts({ 
-            series: series, 
-            xAxis: { type: 'datetime', title: { text: axis[0] } }, 
-            yAxis: yaxes 
-        }); 
-    }, 
-
-    'point': function (event, response) {
-	 var count = $(this).attr('data-count');
-		if (count < 100) {
-			count = 100;
-		}
- 
-        for (var i = 0; i < response.length; i++) { 
-            if (response[i]) { 
-                var chart = $('#' + this.id).highcharts(); 
-
-                // more points? 
-                for (var j = 0; j < response[i].length; j++) { 
-                    chart.series[i].addPoint(response[i][j], false, (chart.series[i].data.length >= count)); 
-                } 
-                chart.redraw(); 
-            } 
-        } 
-    } 
-});  
-
 // ----- plot.rtr -------------------------------------------------------------
 $(document).delegate('div[data-widget="plot.rtr"]', {
 	'update': function (event, response) {
-		// response is: {{ gad_actual }}, {{ gad_set }}, {{ gat_state }} 
+		// response is: {{ gad_actual }}, {{ gad_set }}, {{ gat_state }}
 
 		var label = $(this).attr('data-label').explode();
 		var axis = $(this).attr('data-axis').explode();
@@ -866,7 +1031,6 @@ $(document).delegate('div[data-widget="plot.rtr"]', {
 		if (count < 100) {
 			count = 100;
 		}
-
 		for (var i = 0; i < response.length; i++) {
 			var chart = $('#' + this.id).highcharts();
 
@@ -883,7 +1047,7 @@ $(document).delegate('div[data-widget="plot.rtr"]', {
 	}
 });
 
-// ----- plot.temprose --------------------------------------------------------
+// ----- plot.temprose -----------------------------------------------------
 $(document).delegate('div[data-widget="plot.temprose"]', {
 	'update': function (event, response) {
 		// response is: {{ gad_actual_1, gad_actual_2, gad_actual_3, gad_set_1, gad_set_2, gad_set_3 }}
@@ -932,92 +1096,28 @@ $(document).delegate('div[data-widget="plot.temprose"]', {
 	}
 });
 
-// ----- plot.stacked ----------------------------------------------------------
-$(document).delegate('div[data-widget="plot.stacked"]', {
+
+// ----- s t a t u s -----------------------------------------------------------
+// -----------------------------------------------------------------------------
+
+// ----- status.collapse -------------------------------------------------------
+$(document).delegate('span[data-widget="status.collapse"]', {
 	'update': function (event, response) {
-		// response is: [ [ [t1, y1], [t2, y2] ... ], [ [t1, y1], [t2, y2] ... ], ... ] 
+		// response is: {{ gad_trigger }}
 
-		var label = $(this).attr('data-label').explode();
-		var color = $(this).attr('data-color').explode();
-		var exposure = $(this).attr('data-exposure').explode();
-		var axis = $(this).attr('data-axis').explode();
-		var zoom = $(this).attr('data-zoom');
-		var showStacklabels = JSON.parse($(this).attr('data-stacklabels'));
-		var correctdate = JSON.parse($(this).attr('data-correctdate'));
-		var series = Array();
-
-		for (var i = 0; i < response.length; i++) {
-		    // 1) werte werden um Mitternacht für den Vortag generiert, Anzeige von Highcharts auf dem Folgetag, ABzug von 24h in millisekunden
-		    // 2) timestamp is in milliseconds, harmonize last 3 figures to 000
-		    // sollte also hiermit auf 10sec "ungenau" werden => notwendig für gruppierung von highcharts
-            // 3) remove last value as it is a during the day value 
-		    var oneResponse = response[i]; // [[1420526954593,0],[1420554301019,6.21],[1420585202298,6.7],[1420671601499,7.4],[1420671601527,7.12],[1420747423682,7.12]]
-    		for (var k = 0; k < oneResponse.length; k++) {
-    		    var timestamp = oneResponse[k][0];
-    		    // 1)
-    		    if (correctdate) {
-        		    timestamp = timestamp - 1000 * 60 * 60 * 24;
-        		}
-    		    // 2)
-    		    var newTimestamp = timestamp.toString().substring(0, 9).concat('0000'); 
-                oneResponse[k][0] = parseInt(newTimestamp);
-            }
-            oneResponse.pop(); // 3) 
-            response[i] = oneResponse; 
-
-			series[i] = {
-				type: (exposure[i] != 'stair' ? exposure[i] : 'line'),
-				step: (exposure[i] == 'stair' ? 'left' : false),
-				name: label[i],
-				data: response[i],
-				color: (color[i] ? color[i] : null)
-			}
+		if (response[0] != 0) {
+			$('div[data-bind="' + $(this).attr('data-id') + '"]').not('.ui-collapsible').show();
+			$('div[data-bind="' + $(this).attr('data-id') + '"].ui-popup').popup("open");
+			$('div[data-bind="' + $(this).attr('data-id') + '"]').trigger("expand");
 		}
-		
-
-		// draw the plot
-
-        $('#' + this.id).highcharts({
-				chart: { type: 'column' },
-				series: series,
-				xAxis: { type: 'datetime', title: { text: axis[0] } },
-				yAxis: { min: $(this).attr('data-ymin'), max: $(this).attr('data-ymax'), title: { text: axis[1] }, stackLabels: { 
-				    enabled: showStacklabels, 
-				    style: { color: '#fff', 'font-size': '13px', 'line-height': '14px' } } 
-				    },
-                plotOptions: {
-                    column: {
-                        stacking: 'normal',
-                        dataLabels: { enabled: false }
-                    }
-                }
-        });
-		
-	},
-
-	'point': function (event, response) {
-
-		var count = $(this).attr('data-count');
-		if (count < 100) {
-			count = 100;
-		}
-		for (var i = 0; i < response.length; i++) {
-			if (response[i]) {
-				var chart = $('#' + this.id).highcharts();
-
-				// more points?
-				for (var j = 0; j < response[i].length; j++) {
-					chart.series[i].addPoint(response[i][j], false, (chart.series[i].data.length >= count));
-				}
-				chart.redraw();
-			}
+		else {
+			$('div[data-bind="' + $(this).attr('data-id') + '"]').not('.ui-collapsible').hide();
+			$('div[data-bind="' + $(this).attr('data-id') + '"].ui-popup').popup("close");
+			$('div[data-bind="' + $(this).attr('data-id') + '"]').trigger("collapse");
 		}
 	}
 });
 
-
-// ----- s t a t u s -----------------------------------------------------------
-// -----------------------------------------------------------------------------
 
 // ----- status.log -----------------------------------------------------------
 $(document).delegate('span[data-widget="status.log"]', {
@@ -1050,6 +1150,22 @@ $(document).delegate('span[data-widget="status.notify"]', {
 			notify.add($(this).attr('data-mode'), $(this).attr('data-signal'), $('#' + this.id + ' h1').html(),
 				'<b>' + response[1] + '</b><br  />' + $('#' + this.id + ' p').html());
 			notify.display();
+		}
+	}
+});
+
+// ----- status.popup -----------------------------------------------------------
+$(document).delegate('span[data-widget="status.popup"]', {
+	'update': function (event, response) {
+		// response is: {{ gad_trigger }}, {{ gad_message }}
+
+		if (response[0] != 0) {
+			$('#' + this.id + '-popup p span').html(response[1] ? '<b>' + response[1] + '</b><br />' : '');
+			$('#' + this.id + '-popup .stamp').html(response[2] ? new Date(response[2]).transShort() : new Date().transShort());
+			$('#' + this.id + '-popup').popup('open');	
+		}
+		else {
+			$('#' + this.id + '-popup').popup('close');
 		}
 	}
 });
@@ -1269,5 +1385,88 @@ $(document).delegate('svg[data-widget="icon.windsock"]', {
 		pt = [];
 		pt = pt.concat(fx.rotate([70, 40], ang, [80, 22]), fx.rotate([76, 82], ang, [80, 22]), fx.rotate([84, 82], ang, [80, 22]), fx.rotate([90, 40], ang, [80, 22]));
 		$('#' + this.id + ' #part3').attr('points', pt.toString());
+	}
+});
+
+
+// ----- plot.stacked ----------------------------------------------------------
+$(document).delegate('div[data-widget="plot.stacked"]', {
+	'update': function (event, response) {
+		// response is: [ [ [t1, y1], [t2, y2] ... ], [ [t1, y1], [t2, y2] ... ], ... ] 
+
+		var label = $(this).attr('data-label').explode();
+		var color = $(this).attr('data-color').explode();
+		var exposure = $(this).attr('data-exposure').explode();
+		var axis = $(this).attr('data-axis').explode();
+		var zoom = $(this).attr('data-zoom');
+		var showStacklabels = JSON.parse($(this).attr('data-stacklabels'));
+		var correctdate = JSON.parse($(this).attr('data-correctdate'));
+		var series = Array();
+
+		for (var i = 0; i < response.length; i++) {
+		    // 1) werte werden um Mitternacht für den Vortag generiert, Anzeige von Highcharts auf dem Folgetag, ABzug von 24h in millisekunden
+		    // 2) timestamp is in milliseconds, harmonize last 3 figures to 000
+		    // sollte also hiermit auf 10sec "ungenau" werden => notwendig für gruppierung von highcharts
+            // 3) remove last value as it is a during the day value 
+		    var oneResponse = response[i]; // [[1420526954593,0],[1420554301019,6.21],[1420585202298,6.7],[1420671601499,7.4],[1420671601527,7.12],[1420747423682,7.12]]
+    		for (var k = 0; k < oneResponse.length; k++) {
+    		    var timestamp = oneResponse[k][0];
+    		    // 1)
+    		    if (correctdate) {
+        		    timestamp = timestamp - 1000 * 60 * 60 * 24;
+        		}
+    		    // 2)
+    		    var newTimestamp = timestamp.toString().substring(0, 9).concat('0000'); 
+                oneResponse[k][0] = parseInt(newTimestamp);
+            }
+            oneResponse.pop(); // 3) 
+            response[i] = oneResponse; 
+
+			series[i] = {
+				type: (exposure[i] != 'stair' ? exposure[i] : 'line'),
+				step: (exposure[i] == 'stair' ? 'left' : false),
+				name: label[i],
+				data: response[i],
+				color: (color[i] ? color[i] : null)
+			}
+		}
+		
+
+		// draw the plot
+
+        $('#' + this.id).highcharts({
+				chart: { type: 'column' },
+				series: series,
+				xAxis: { type: 'datetime', title: { text: axis[0] } },
+				yAxis: { min: $(this).attr('data-ymin'), max: $(this).attr('data-ymax'), title: { text: axis[1] }, stackLabels: { 
+				    enabled: showStacklabels, 
+				    style: { color: '#fff', 'font-size': '13px', 'line-height': '14px' } } 
+				    },
+                plotOptions: {
+                    column: {
+                        stacking: 'normal',
+                        dataLabels: { enabled: false }
+                    }
+                }
+        });
+		
+	},
+
+	'point': function (event, response) {
+		var count = $(this).attr('data-count');
+		if (count < 100) {
+			count = 100;
+		}
+		for (var i = 0; i < response.length; i++) {
+			if (response[i]) {
+				var chart = $('#' + this.id).highcharts();
+
+				// more points?
+				for (var j = 0; j < response[i].length; j++) {
+					chart.series[i].addPoint(response[i][j], false, (chart.series[i].data.length >= count));
+				}
+				chart.redraw();
+			}
+		}
 	}
 });
