@@ -20,11 +20,12 @@ With the specification of the BaseID, 128 different transmit IDs are available, 
 
 Learning Mode:
 For some enocean devices it is important to teach in the enocean stick first. In order to send a special learning message, start smarthome with the interactive console: ./smarthome.py -i
-Then use the following command:
+Then use one of the following commands:
 <pre>
-	sh.enocean.send_learn(ID_Offset)
+	sh.enocean.send_learn_dim(ID_Offset)
+	sh.enocean.send_learn_switch(ID_Offset)
 </pre>
-, where ID_Offset, range (0-127), specifies the sending ID offset with respect to the BaseID. Later, the ID offset is specified in the item.conf for every outgoing send command, see example below.
+depending on whether to lern in a dimmer or switch as they have different teach in messages. In this case ID_Offset is within the range (0-127) and specifies the sending ID offset with respect to the BaseID. Later, the ID offset is specified in the item.conf for every outgoing send command, see example below.
 Use different ID offsets for different groups of actors.
 That's it!
   
