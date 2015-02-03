@@ -88,7 +88,18 @@ class EnOcean():
         self._response_lock = threading.Condition()
         self._rx_items = {}
         self._block_ext_out_msg = False
-
+		
+	def _parse_eep_A5_20_01(self, payload):
+		# 4BS Telegram, HVAC component, Battery powered device, for example Alpha Eos, RORG = 0x07
+		logger.debug("enocean: processing A5_20_01")
+		results = {}
+		results['VALUE']       =  payload[0]
+		results['SERVICE']     =  ((payload[1] & 1 << 0) == (1 << 0))
+		results['BATTERY']     =  not((payload[1] & 1 << 3) == (1 << 3))
+		# Temperature in °C:
+		results['TEMPERATURE'] = payload[2] * 40 / (255) 
+		return results
+	
     def _parse_eep_A5_3F_7F(self, payload):
         #logger.debug("enocean: processing A5_3F_7F")
         results = {'DI_3': (payload[3] & 1 << 3) == 1 << 3, 'DI_2': (payload[3] & 1 << 2) == 1 << 2, 'DI_1': (payload[3] & 1 << 1) == 1 << 1, 'DI_0': (payload[3] & 1 << 0) == 1 << 0}

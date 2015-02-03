@@ -52,10 +52,32 @@ last state of right rocker = B
 Mechanical handle example:
 handle_status = STATUS
 
+The following example is for a rocker/switch with two rocker and 6 available combinations (EEP A5_20_01).  
+
+value_in_percent = VALUE
+service = SERVICE
+replace_battery = BATTERY
+temperature = TEMPERATURE
+
 Example item.conf
 =
 <pre>
 [Enocean]
+	[[HeatingActor1]]
+		enocean_rx_id = 01234567
+		enocean_rx_eep = A5_20_01
+		[[[valve]]]
+			type = num
+			enocean_rx_key = VALUE
+			visu_acl = ro
+		[[[battery]]]
+			type = bool
+			enocean_rx_key = BATTERY
+			visu_acl = ro
+		[[[is_temperature]]]
+			type = num
+			enocean_rx_key = TEMPERATURE
+			visu_acl = ro
 	[[Door]]
 		enocean_rx_id = 01234567
 		enocean_rx_eep = D5_00_01
@@ -147,6 +169,8 @@ A5_11_04	Dimmer status feedback
 
 A5_12_01	Power Measurement
 
+A5_20_01	4BS Telegram, HVAC component, Battery powered device, for example Alpha Eos
+		
 D5_00_01	Door/Window Contact, e.g. Eltako FTK, FTKB
 
 Send commands: Tx EEPs
