@@ -22,8 +22,9 @@ Learning Mode:
 For some enocean devices it is important to teach in the enocean stick first. In order to send a special learning message, start smarthome with the interactive console: ./smarthome.py -i
 Then use one of the following commands:
 <pre>
-	sh.enocean.send_learn_dim(ID_Offset)
-	sh.enocean.send_learn_switch(ID_Offset)
+	sh.enocean.send_learn_telegram(ID_Offset=0, Rorg=0, Func=0, Type=0, Manufactur_ID =0, variation=3), generic command for all Rorgs and variations
+	sh.enocean.send_learn_dim(ID_Offset), ready to use command for dimmers
+	sh.enocean.send_learn_switch(ID_Offset), ready to use command for switches.
 </pre>
 depending on whether to lern in a dimmer or switch as they have different teach in messages. In this case ID_Offset is within the range (0-127) and specifies the sending ID offset with respect to the BaseID. Later, the ID offset is specified in the item.conf for every outgoing send command, see example below.
 Use different ID offsets for different groups of actors.
