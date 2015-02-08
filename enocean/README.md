@@ -24,7 +24,7 @@ Then use one of the following commands:
 <pre>
 	sh.enocean.send_learn_telegram(ID_Offset=0, Rorg=0, Func=0, Type=0, Manufactur_ID =0, variation=3), generic command for all Rorgs and variations
 	sh.enocean.send_learn_dim(ID_Offset), ready to use command for dimmers
-	sh.enocean.send_learn_switch(ID_Offset), ready to use command for switches.
+	sh.enocean.send_learn_switch(ID_Offset), ready to use command for switches, e.g. Eltako FSR61G-230V, etc.
 </pre>
 depending on whether to lern in a dimmer or switch as they have different teach in messages. In this case ID_Offset is within the range (0-127) and specifies the sending ID offset with respect to the BaseID. Later, the ID offset is specified in the item.conf for every outgoing send command, see example below.
 Use different ID offsets for different groups of actors.
@@ -162,7 +162,7 @@ You have to know about the EnOcean RORG of your device, so pleas ask Mr.Google o
 
 F6_02_02	2-Button-Rocker
 
-F6_02_03	2-Button-Rocker, Status feedback from manual buttons on different actors, e.g. Eltako FT55, FSUD-230, FSVA-230V or Gira switches.
+F6_02_03	2-Button-Rocker, Status feedback from manual buttons on different actors, e.g. Eltako FT55, FSUD-230, FSVA-230V, FSR61G-230V or Gira switches.
 
 F6_10_00	Mechanical Handle  
 
@@ -177,7 +177,7 @@ D5_00_01	Door/Window Contact, e.g. Eltako FTK, FTKB
 Send commands: Tx EEPs
 =
 
-A5_38_08_01	Regular switch actor command (on/off)
+A5_38_08_01	Regular switch actor command (on/off), e.g. Eltako FSR61G-230V
 
 A5_38_08_02	Dimmer command with fix on off command (on: 100, off:0)
 
