@@ -408,8 +408,8 @@ class EnOcean():
             
             # check if there is a function to parse payload
             if not callable(getattr(self, "_parse_eep_" + rx_eep, None)):
-                logger.error("enocean: item {} misses parser for eep {}".format(item, rx_eep))
-                return None
+                logger.error("enocean: item {} misses parser for eep {} - should be a _parse_eep_{}-function!".format(item, rx_eep, rx_eep))
+				return None
             
             if (not rx_id in self._rx_items):
                 self._rx_items[rx_id] = {rx_eep: [item]}
