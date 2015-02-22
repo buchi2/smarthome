@@ -168,6 +168,11 @@ var io = {
 						notify.warning('Driver: smarthome.py', 'Protocol mismatch<br />smartVISU driver is: v' + io.version + '<br />SmartHome.py is: v' + proto + '<br /><br /> Update the system!');
 					}
 					break;
+
+				case 'url':
+					$.mobile.changePage(data.url);
+                                   break;
+
 			}
 		};
 
