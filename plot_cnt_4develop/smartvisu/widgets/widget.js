@@ -666,7 +666,8 @@ $(document).delegate('div[data-widget="device.codepad"] > div > a', {
 			}
 			else {
 				// DEBUG: console.log('[device.codepad] ' + node.attr('id') + ' wrong code ' + code.val());
-				code.val('');
+				code.val('Wrong Code');
+				code.prop('type', 'text');
 				$('#' + node.attr('id')).addClass('ui-focus');
 				setTimeout(function () {
 					$('#' + node.attr('id')).removeClass('ui-focus');
@@ -675,8 +676,13 @@ $(document).delegate('div[data-widget="device.codepad"] > div > a', {
 		}
 		else if (key == "-") {
 			code.val('');
+			code.prop('type', 'password');
 		}
 		else {
+			if (code.val() == 'Wrong Code') {
+				code.val('');
+				code.prop('type', 'password');
+			}
 			code.val(code.val() + key);
 		}
 	}
