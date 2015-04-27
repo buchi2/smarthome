@@ -347,7 +347,10 @@ class EnOcean():
                     #if (isinstance(item(), bool)):
                     #if item.conf['type'] == bool:
                     #Identify send command based on tx_eep coding:
-                    if(tx_eep == 'A5_38_08_02'):
+                    if(tx_eep == 'A5_20_04'):
+                        self.send_radiator_valve(id_offset)
+                        logger.debug('enocean: sent A5_20_04 radiator valve command')
+                    elif(tx_eep == 'A5_38_08_02'):
                         #if isinstance(item, bool):
                         logger.debug('enocean: item is A5_38_08_02 type')
                         if not item():
@@ -451,6 +454,29 @@ class EnOcean():
         self._response_lock.wait(5)
         self._response_lock.release()
         self._cmd_lock.release()
+
+    def send_radiator_valve(self,id_offset=0):
+        logger.debug("enocean: sending valve command A5_20_04")
+        valve_position = 50
+        temperature = 20
+        TSP = int((temperature -10)*255/30)
+        MC  = 1 #off
+        WUC = 3 # 120 seconds
+        status =  0 + (MC << 1) + (WUC << 2) 
+        BLC = 0 # unlocked
+        LRNB = 1# data
+        DSO = 0 # 0 degree
+        status2 = (BLC << 5) + (LRNB << 4) + (DSO << 2) 
+        self._send_radio_packet(id_offset, 0xA5, [valve_position, TSP, status , status2])
+
+
+    def send_learn_radiator_valve(self, id_offset=0):
+        if (id_offset < 0) or (id_offset > 127):
+            logger.error("enocean: ID offset out of range (0-127). Aborting.")
+            return
+        logger.info("enocean: sending learn telegram for radiator valve")
+        self._send_radio_packet(id_offset, 0xA5, [0x00, 0x00, 0x00, 0x00])
+
 
     def send_dim(self,id_offset=0, dim=0, dimspeed=0):
         if (dimspeed < 0) or (dimspeed > 255):
