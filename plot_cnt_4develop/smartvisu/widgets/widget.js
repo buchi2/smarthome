@@ -1242,7 +1242,6 @@ $(document).delegate('span[data-widget="status.message"]', {
 	}
 });
 
-
 // ----- i c o n --------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
@@ -1274,13 +1273,11 @@ $(document).delegate('svg[data-widget="icon.arrow"]', {
 		var ang = response[0] / $(this).attr('data-max') * 2 * Math.PI;
 
 		var pt = [];
-		pt = pt.concat([50, 50], fx.rotate([25, 50], ang, [50, 50]), fx.rotate([50, 18], ang, [50, 50]), fx.rotate([75,
-			50], ang, [50, 50]), [50, 50]);
+		pt = pt.concat([50, 50], fx.rotate([25, 50], ang, [50, 50]), fx.rotate([50, 18], ang, [50, 50]), fx.rotate([75, 50], ang, [50, 50]), [50, 50]);
 		$('#' + this.id + ' #line0').attr('points', pt.toString());
 
 		pt = [];
-		pt = pt.concat(fx.rotate([32, 50], ang, [50, 50]), fx.rotate([32, 60], ang, [50, 50]), fx.rotate([68, 60], ang,
-			[50, 50]), fx.rotate([68, 50], ang, [50, 50]));
+		pt = pt.concat(fx.rotate([32, 50], ang, [50, 50]), fx.rotate([32, 60], ang, [50, 50]), fx.rotate([68, 60], ang, [50, 50]), fx.rotate([68, 50], ang, [50, 50]));
 		$('#' + this.id + ' #line1').attr('points', pt.toString());
 	}
 });
@@ -1290,7 +1287,7 @@ $(document).delegate('svg[data-widget="icon.battery"]', {
 	'update': function (event, response) {
 		// response is: {{ gad_value }}, {{ gad_switch }}
 
-		var val = Math.round(response[0] / $(this).attr('data-max') * 40);
+		var val = Math.floor(response[0] / $(this).attr('data-max') * 40 / 6) * 6;
 		fx.grid(this, val, [39, 68], [61, 28]);
 	}
 });
@@ -1300,7 +1297,7 @@ $(document).delegate('svg[data-widget="icon.blade"]', {
 	'update': function (event, response) {
 		// response is: {{ gad_value }}, {{ gad_switch }}
 
-		// calculate angle in (0 - ~90Â°)
+		// calculate angle in (0 - ~90°)
 		var ang = response[0] / $(this).attr('data-max') * 0.4 * Math.PI;
 		var pt;
 
@@ -1317,7 +1314,7 @@ $(document).delegate('svg[data-widget="icon.blade_z"]', {
 	'update': function (event, response) {
 		// response is: {{ gad_value }}, {{ gad_switch }}
 
-		// calculate angle in (0 - 90Â°)
+		// calculate angle in (0 - 90°)
 		var ang = response[0] / $(this).attr('data-max') * 0.5 * Math.PI * -1;
 
 		var pt = [];
@@ -1335,7 +1332,7 @@ $(document).delegate('svg[data-widget="icon.blade_arc"]', {
 	'update': function (event, response) {
 		// response is: {{ gad_value }}, {{ gad_switch }}
 
-		// calculate angle in (0 - 90Â°)
+		// calculate angle in (0 - 90°)
 		var ang = response[0] / $(this).attr('data-max') * -0.7 * Math.PI + 0.35 * Math.PI;
 		var pt;
 
@@ -1399,6 +1396,20 @@ $(document).delegate('svg[data-widget="icon.graph"]', {
 	}
 });
 
+// ----- icon.light ---------------------------------------------------------
+$(document).delegate('svg[data-widget="icon.light"]', {
+	'update': function (event, response) {
+		// response is: {{ gad_value }}, {{ gad_switch }}
+		var val = Math.round(response[0] / $(this).attr('data-max') * 10);
+		// Iterate over all child elements
+		var i = 1;
+		$('#' + this.id + ' g#light-rays line').each(function () {
+			$(this).css("visibility", (val >= i ? "visible" : "hidden"));
+			i++;
+		});
+	}
+});
+
 // ----- icon.meter -----------------------------------------------------------
 $(document).delegate('svg[data-widget="icon.meter"]', {
 	'update': function (event, response) {
@@ -1416,6 +1427,37 @@ $(document).delegate('svg[data-widget="icon.shutter"]', {
 
 		var val = Math.round(response[0] / $(this).attr('data-max') * 38);
 		fx.grid(this, val, [14, 30], [86, 68]);
+	}
+});
+
+// ----- icon.ventilation -----------------------------------------------------
+$(document).delegate('svg[data-widget="icon.ventilation"]', {
+	'update': function (event, response) {
+		// response is: {{ gad_value }}, {{ gad_switch }}
+
+		var val = (1 - response[0] / $(this).attr('data-max')) * 4.5 + 0.5;
+		$('#' + this.id + ' #anim').attr('dur', (response[0] > 0 ? val : 0));
+	}
+});
+
+// ----- icon.volume ---------------------------------------------------------
+$(document).delegate('svg[data-widget="icon.volume"]', {
+	'update': function (event, response) {
+		// response is: {{ gad_value }}, {{ gad_switch }}
+
+		var val = Math.round(response[0] / $(this).attr('data-max') * 71);
+		// fx.bar(this, val, [left, bottom], [right, top]);
+		fx.bar(this, val, [18, 68], [89, 50]);
+	}
+});
+
+// ----- icon.windmill --------------------------------------------------------
+$(document).delegate('svg[data-widget="icon.windmill"]', {
+	'update': function (event, response) {
+		// response is: {{ gad_value }}, {{ gad_switch }}
+
+		var val = (1 - response[0] / $(this).attr('data-max')) * 4.5 + 0.5;
+		$('#' + this.id + ' #anim').attr('dur', (response[0] > 0 ? val : 0));
 	}
 });
 
@@ -1460,33 +1502,15 @@ $(document).delegate('svg[data-widget="icon.windsock"]', {
 	}
 });
 
-
-// ----- icon.light ---------------------------------------------------------
-$(document).delegate('svg[data-widget="icon.light"]', {
-	'update': function (event, response) {
-		// response is: {{ gad_value }}, {{ gad_switch }}
-        var val = Math.round(response[0] / $(this).attr('data-max') * 10);
-        // Iterate over all child elements
-        var i=1;
-        $('#' + this.id + ' g#light-rays line').each(function(){
-            if (val >= i) {
-                $(this).css("visibility", "visible");
-            } 
-            else {
-                $(this).css("visibility", "hidden");
-            }
-            i++;
-        });
-	}
-});
-
-// ----- icon.volume ---------------------------------------------------------
-$(document).delegate('svg[data-widget="icon.volume"]', {
+// ----- icon.zenith ----------------------------------------------------------
+$(document).delegate('svg[data-widget="icon.zenith"]', {
 	'update': function (event, response) {
 		// response is: {{ gad_value }}, {{ gad_switch }}
 
-		var val = response[0] / $(this).attr('data-max');
-        // fx.bar(this, val, [left, bottom], [right, top]);
-		fx.bar(this, val, [18, 68], [89, 50]);
+		var ang = response[0] / $(this).attr('data-max') * Math.PI;
+		pt = fx.rotate([10, 90], ang, [50, 90]);
+		
+		$('#' + this.id + ' #sun').attr('x', pt[0] - 50);
+		$('#' + this.id + ' #sun').attr('y', pt[1] - 50);
 	}
 });
