@@ -1,0 +1,48 @@
+/**
+* Widget for usage of uzsu plugin
+* (c) Michael Würtenberger 2014, 2015
+*
+* develop v3
+*
+* läuft zusammen mit dem visu.js ab v2.8 
+*
+* @param unique id for this widget
+* @param a gad/item
+* @param headline for popup (optional), default UZSZ
+* @param designType for popup design (optional), default = '0', 
+*												 expert mode = '1'  (value, time, rrule direct input)
+* @param pic on (optional), default = clock
+* @param pic off (optional), default = clock
+* @param valueType (optional), default = bool, supported types are 'bool', 'num', 'text', 'list'
+* @param valueParameterList (optional), default set in js depending on valueType
+* @param optional color
+*/
+
+{% macro uzsu_icon(id, gad_uzsu, gad_headline, gad_designType, pic_on, pic_off, gad_valueType, gad_valueParameterList, color) %}
+	{% set uid = uid(page, id) %}
+	<span 
+		id="{{ uid }}" 
+		data-widget="uzsu.uzsu_icon" 
+		data-item="{{ gad_uzsu }}" 
+		data-headline="{{ gad_headline|default('UZSU') }}" 
+		data-designType="{{ gad_designType | default('0') }}"
+		data-pic-on="{{ pic_on|deficon('time_timer_switch.svg') }}" 
+		data-pic-off="{{ pic_off|deficon('time_timer_switch.svg')}}"
+		data-valueType="{{ gad_valueType|default('bool') }}"
+		data-valueParameterList="{{ implode(gad_valueParameterList) }}"
+		class="switch icon">
+			<a>
+				<img id="{{ uid }}-off" class="icon" src="{{ pic_off|deficon('time_timer_switch.svg') }}" />
+				{% if color is empty  %}
+        				<img id="{{ uid }}-on" class="icon icon1 hide" src="{{ pic_on|deficon('time_timer_switch.svg') }}" />
+				{% elseif color == 'icon1' %}
+					<img id="{{ uid }}-on" class="icon icon1 hide" src="{{ pic_on|deficon('time_timer_switch.svg') }}" />
+				{% else %}
+					<img id="{{ uid }}-on" class="icon icon1 hide" style="stroke:{{ color }}; fill:{{ color }};" src="{{ pic_on|deficon('time_timer_switch.svg') }}" />
+				{% endif %}
+			</a>
+
+	</span>
+	
+{% endmacro %}
+
