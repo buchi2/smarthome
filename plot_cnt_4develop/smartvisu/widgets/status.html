@@ -1,0 +1,89 @@
+/**
+* -----------------------------------------------------------------------------
+* @package     smartVISU
+* @author      Martin Gleiß
+* @copyright   2012 - 2015
+* @license     GPL [http://www.gnu.de]
+* -----------------------------------------------------------------------------
+*/
+
+
+/**
+* Show and hide a div or popup or collapse a section.
+*
+* @param unique id for this widget. Use this id in a div in the data-bind attribute to bind it to that widget
+* @param a item witch triggers the collapse
+*/
+{% macro collapse(id, item_trigger) %}
+
+	<span id="{{ uid(page, id) }}" data-id="{{ id }}" data-widget="status.collapse" data-item="{{ item_trigger }}"></span>
+
+{% endmacro %}
+
+	
+/**
+* Displays a list of logging-information
+*
+* @param unique id for this widget
+* @param the name of the log
+* @param maximal number of entries (1 - 50)
+*/
+{% macro log(id, item, count) %}
+
+	<span id="{{ uid(page, id) }}" data-widget="status.log" data-item="{{ item }}" data-count="{{ count }}"
+		class="log">
+		<ul data-role="listview">
+		</ul>
+	</span>
+
+{% endmacro %}
+
+
+/**
+* Displays a notification edge window
+*
+* @param unique id for this widget
+* @param a item witch triggers the notification
+* @param a item with the dynamic message
+* @param a word for the signal corner
+* @param a title of the messagebox
+* @param a additional static text
+* @param the mode: 'info', 'warning', 'error' (optional, default 'info')
+*/
+{% macro notify(id, item_trigger, item_message, signal, title, text, mode) %}
+
+	<span id="{{ uid(page, id) }}" data-widget="status.notify" data-item="{{ item_trigger }}, {{ item_message }}"
+		data-signal="{{ signal|default('INFO') }}" data-mode="{{ mode|default('info') }}"
+		class="hide"><h1>{{ title }}</h1><p>{{ text }}</p>
+	</span>
+
+{% endmacro %}
+
+	
+/**
+* Displays a notification popup window with a message
+*
+* @param unique id for this widget
+* @param a item witch triggers the popup: NOT 0 open it, 0 close it
+* @param a item with the dynamic message
+* @param a item with the a timestamp
+* @param a title of the messagebox
+* @param a additional static text
+* @param the mode: 'info', 'error' (optional, default 'info')
+*/
+{% macro message(id, item_trigger, item_message, item_timestamp, title, text, mode) %}
+
+	<span id="{{ uid(page, id) }}" data-widget="status.message" data-item="{{ item_trigger }}, {{ item_message }}, {{ item_timestamp }}"></span>
+
+	<div id="{{ uid(page, id) }}-message" class="alert" data-role="popup" data-overlay-theme="a" {% if mode == 'error' %} data-dismissible="false" {% endif %}>
+		<div data-role="header" data-theme="c"><h1>{{ title }}</h1></div>
+		<p><span></span>{{ text }}</p>
+	
+		<div class="control">
+			<span class="stamp"></span>
+				<a onClick="$('#{{ uid(page, id) }}-message').popup('close');" class="ui-mini" data-icon="check" data-iconpos="top" data-role="button" data-inline="true">OK</a>
+		</div>
+	</div>
+
+{% endmacro %}
+

@@ -1,0 +1,236 @@
+/**
+* -----------------------------------------------------------------------------
+* @package     smartVISU
+* @author      Martin Gleiß
+* @copyright   2012 - 2015
+* @license     GPL [http://www.gnu.de]
+* -----------------------------------------------------------------------------
+*/
+
+
+/**
+* Standard blind
+*
+* @param unique id for this widget
+* @param name of the blind
+* @param a item for the up- and down- movement
+* @param a item for stopping the movement (optional)
+* @param a item for the actual absolute position of the blinds
+* @param a item for increase- and decreace- of the blade (optional)
+* @param a item for the actual absolute angle of the blade (optional)
+* @param the minimum value for close (optional, default 0)
+* @param the maximum value for open (optional, default 255)
+* @param step between two values (optional, default 5)
+*
+* @info inspired by Frank Berlenz
+*/
+{% macro blind(id, txt, item_move, item_stop, item_pos, item_shift, item_angle, min, max, step) %}
+	{% import "basic.html" as basic %}
+	{% set uid = uid(page, id) %}
+
+	<div class="blind">
+		<table align="center" cellpadding="0">
+			<tr>
+				<td valign="top">
+					<div class="set">{{ basic.button(id~'up', item_move, '', 'arrow-u', 0) }}</div>
+				</td>
+				<td rowspan="3" align="left" class="pos">
+					{{ basic.slider(id~'pos', item_pos, min, max, step, 'vertical') }}</td>
+				<td rowspan="2" valign="bottom" class="angle">
+					{{ txt }}<br />
+					{% if item_angle %} {{ basic.slider(id~'angle', item_angle, min, max, step, 'semicircle') }} {% endif %}
+				</td>
+			</tr>
+			<tr>
+				<td>
+					{% if item_stop %}
+						<div class="set">{{ basic.button(id~'stop', item_stop, '', 'delete', 1) }}</div> {% endif %}</td>
+			</tr>
+			<tr>
+				<td valign="bottom">
+					<div class="set">{{ basic.button(id~'down', item_move, '', 'arrow-d', 1) }}</div>
+				</td>
+				<td valign="bottom">
+					{% if item_shift %}
+						<div class="set">
+							<span style="float: left;">{{ basic.button(id~'minus', item_shift, '', 'minus', 0) }}</span>
+							<span style="float: right;">{{ basic.button(id~'plus', item_shift, '', 'plus', 1) }}</span>
+						</div>
+					{% endif %}
+				</td>
+			</tr>
+		</table>
+	</div>
+{% endmacro %}
+
+
+/**
+* The Codepad is used to protect some widgets. You have to enter a correct code to use the widgets for a time.
+* You may specify a global code in the connfig.php for all codepads.
+*
+* @param unique id for this widget
+* @param code to be entered (optional, default in config)
+* @param a title for the pad (optional)
+* @param a duration for unlocking the widgets (optional, default  1min)
+*/
+{% macro codepad(id, code, title, duration) %}
+	{% set uid = uid(page, id) %}
+
+	<div id="{{ uid }}" data-id="{{ id }}" data-widget="device.codepad" data-val="{{ code|default(config_codepad_code) }}" data-duration="{{ duration|default('1i') }}"
+		data-role="popup" data-overlay-theme="a" class="alert" style="width: 166px;" >
+		<div data-role="header" data-theme="c"><h1>{{ title|default('Enter Code') }}</h1></div>
+
+		<input id="{{ uid }}-code" type="password" style="text-align: center;"/>
+		
+		<div style="margin: 10px;">
+		{% for i in 1..9 %}
+			<a data-val="{{ i }}" data-role="button" data-inline="true" data-iconpos="nopic" class="ui-mini" >{{ i }}</a>
+		{% endfor %}
+			<a data-val="-" data-role="button" data-inline="true" data-iconpos="nopic" class="ui-mini" >-</a>
+			<a data-val="0" data-role="button" data-inline="true" data-iconpos="nopic" class="ui-mini" >0</a>
+			<a id="{{ uid }}-ok" data-val="ok" data-role="button" data-inline="true" data-iconpos="nopic" class="ui-mini" >OK</a>
+		</div>
+	</div>
+
+	<script type="text/javascript">
+		$('div[data-bind="{{ id }}"]').click(function (event) {
+			if (!$(this).attr('data-access')) {
+				$('#{{ uid }}').popup('open');
+				$('#{{ uid }}-code').val('').focus();
+				event.stopPropagation();
+			}
+		});
+	</script>
+
+{% endmacro %}
+
+
+/**
+* Standard dimmer with switching and dimming function
+*
+* @param unique id for this widget
+* @param name of the dimmer
+* @param a item for switching
+* @param a item for dimming
+* @param the minimum value if the slider is moved to total left (optional, default 0)
+* @param the maximum value if the slider is moved to total right (optional, default 255)
+* @param step between two values (optional, default 5)
+*/
+{% macro dimmer(id, txt, item_switch, item_value, min, max, step) %}
+	{% import "basic.html" as basic %}
+
+	<div class="dimmer">
+		{{ basic.switch(id~'switch', item_switch, 'light_light.svg', 'light_light.svg') }}
+		<p>{{ txt|e }}</p>
+		{{ basic.slider(id~'slider', item_value, min, max, step) }}
+	</div>
+
+{% endmacro %}
+
+
+/**
+* Standard RTR (Room Temperatur Regulator)
+*
+* @param unique id for this widget
+* @param name of the rtr
+* @param a item for the actual temperature
+* @param a item for the set temperature
+* @param a item for comfort / standby (3x bit or 1x byte)
+* @param a item for night (3x bit or 1x byte)
+* @param a item for frost (3x bit or 1x byte)
+* @param a item for the current state of the actor
+* @param a item for a text (some rtr have a text-display), (optional)
+* @param step for plus/minus buttons (optional, default 0.5)
+*/
+{% macro rtr(id, txt, item_actual, item_set, item_comfort, item_night, item_frost, item_state, item_txt, step) %}
+	{% import "basic.html" as basic %}
+
+	<div id="{{ uid(page, id) }}" data-widget="device.rtr" data-step="{{ step|default(0.5) }}"
+		class="rtr">
+		<div class="actual">
+			<div class="temp">{{ basic.float(id~'actual', item_actual, '°' ) }}</div>
+			<div class="text">{{ txt }} {% if item_txt %} {{ basic.value(id~'txt', item_txt) }} {% endif %}</div>
+		</div>
+
+		{% if item_set %}
+			<div class="set">
+				<a data-role="button" data-icon="minus" data-inline="true" data-iconpos="notext" class="ui-mini"></a>
+
+				<div class="temp">{{ basic.float(id~'set', item_set, '°' ) }}</div>
+				<a data-role="button" data-icon="plus" data-inline="true" data-iconpos="notext" class="ui-mini"></a>
+			</div>
+		{% endif %}
+
+		<div class="control">
+			{% if ((config_driver == 'linknx') and (item_comfort == item_night) and (item_night == item_frost)) %}
+				{{ basic.switch(id~'mode', item_comfort, 'user_available.svg', 'user_away.svg', 'comfort', 'standby') }}
+				{{ basic.switch(id~'night', item_night, 'scene_night.svg', 'scene_day.svg', 'night', 'standby') }}
+				{{ basic.switch(id~'frost', item_frost, 'weather_frost.svg', 'weather_frost.svg', 'frost', 'standby') }}
+			{% elseif ((item_comfort == item_night) and (item_night == item_frost)) %}
+				{{ basic.switch(id~'mode', item_comfort, 'user_available.svg', 'user_away.svg', '1', '2') }}
+				{{ basic.switch(id~'night', item_night, 'scene_night.svg', 'scene_day.svg', '3', '2') }}
+				{{ basic.switch(id~'frost', item_frost, 'weather_frost.svg', 'weather_frost.svg', '4', '2') }}
+			{% else %}
+				{{ basic.switch(id~'mode', item_comfort, 'user_available.svg', 'user_away.svg') }}
+				{{ basic.switch(id~'night', item_night, 'scene_night.svg', 'scene_day.svg') }}
+				{{ basic.switch(id~'frost', item_frost, 'weather_frost.svg', 'weather_frost.svg') }}
+			{% endif %}
+			<div style="float:left; width: 3px; height: 50px;"></div>
+			{{ basic.switch(id~'state', item_state, 'sani_heating.svg', 'sani_heating.svg') }}
+		</div>
+	</div>
+{% endmacro %}
+
+
+/**
+* Standard shutter
+*
+* @param unique id for this widget
+* @param name of the shutter
+* @param a item for the up- and down- movement
+* @param a item for stopping the movement (optional)
+* @param a item for the actual absolute position of the blinds
+* @param a item for increase- and decreace- of the blade (optional, for future use)
+* @param a item for the actual absolute angle of the blade (optional)
+* @param a item for some saved positions (optional)
+* @param the minimum value for close (optional, default 0)
+* @param the maximum value for open (optional, default 255)
+* @param step between two values (optional, default 5)
+* @param the mode: 'half' blade turns from -1 to +1, or 'full' blade turns from 0 to +1 (optional, default 'half')
+*
+* @info inspired by Jörg Gutowski
+*/
+{% macro shutter(id, txt, item_move, item_stop, item_pos, item_shift, item_angle, item_saved, min, max, step, mode) %}
+	{% import "basic.html" as basic %}
+	{% set uid = uid(page, id) %}
+
+	<div class="blind">
+		<table align="center" cellpadding="0">
+			<tr>
+				<td valign="top">
+					<div class="set">{{ basic.button(id~'up', item_move, '', 'arrow-u', 0) }}</div>
+				</td>
+				<td rowspan="3" align="center" class="pos">
+					{{ basic.shutter(id, item_pos, item_angle, min, max, step, mode) }}</td>
+				<td valign="top">
+					{% if item_saved %}
+						<div>{{ basic.button(id~'saved1', item_saved, 'Pos1', 'grid', 0) }} </div>{% endif %}</td>
+			</tr>
+			<tr>
+				<td valign="center">
+					{% if item_stop %}
+						<div class="set">{{ basic.button(id~'stop', item_stop, '', 'delete', 1) }}</div> {% endif %}</td>
+				<td valign="center">{{ txt }}</td>
+			</tr>
+			<tr>
+				<td valign="bottom">
+					<div class="set">{{ basic.button(id~'down', item_move, '', 'arrow-d', 1) }}</div>
+				</td>
+				<td valign="bottom">
+					{% if item_saved %}
+						<div>{{ basic.button(id~'saved2', item_saved, 'Pos2', 'grid', 1) }} </div>{% endif %}</td>
+			</tr>
+		</table>
+	</div>
+
+{% endmacro %}
