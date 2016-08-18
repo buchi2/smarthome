@@ -219,20 +219,28 @@ $(document).on('pagebeforeshow', function () {
 	$('a[data-widget="basic.dual"]').on( {
 		'update': function (event, response) {
 			event.stopPropagation();
-			$('#' + this.id + ' img').attr('src', (response == $(this).attr('data-val-on') ? $(this).attr('data-pic-on') : $(this).attr('data-pic-off')));
+			$(this).val(response);
+			$(this).trigger('draw');
+		},
+
+		'draw': function(event) {
+			event.stopPropagation();
+			if($(this).val() == $(this).attr('data-val-on')) {
+				$('#' + this.id + '-off').hide();
+				$('#' + this.id + '-on').show();
+			}
+			else {
+				$('#' + this.id + '-on').hide();
+				$('#' + this.id + '-off').show();
+			}
 		},
 
 		'click': function (event) {
 			event.stopPropagation();
-			if ($('#' + this.id + ' img').attr('src') == $(this).attr('data-pic-off')) {
-				io.write($(this).attr('data-item'), $(this).attr('data-val-on'));
-			}
-			else {
-				io.write($(this).attr('data-item'), $(this).attr('data-val-off'));
-			}
+			io.write($(this).attr('data-item'), ($(this).val() == $(this).attr('data-val-off') ? $(this).attr('data-val-on') : $(this).attr('data-val-off')) );
 		}
 	});
-
+	
 // ----- basic.multistate ------------------------------------------------------
 $('a[data-widget="basic.multistate"]').on( {
 		'update': function (event, response) {
@@ -548,29 +556,30 @@ $(document).delegate('span[data-widget="basic.shifter"] > a > img', 'hover', fun
 	$('span[data-widget="basic.switch"]').on({
 		'update': function (event, response) {
 			event.stopPropagation();
-			$('#' + this.id + ' img').attr('src', (response == $(this).attr('data-val-on') ? $(this).attr('data-pic-on') : $(this).attr('data-pic-off')));
+			$(this).val(response);
+			$(this).trigger('draw');
+
 		},
 
 		'click': function (event) {
 			event.stopPropagation();
-			if ($('#' + this.id + ' img').attr('src') == $(this).attr('data-pic-off')) {
-				io.write($(this).attr('data-item'), $(this).attr('data-val-on'));
+			io.write($(this).attr('data-item'), ($(this).val() == $(this).attr('data-val-off') ? $(this).attr('data-val-on') : $(this).attr('data-val-off')) );
+		},
+		
+		'draw': function(event) {
+			event.stopPropagation();
+			if($(this).val() == $(this).attr('data-val-on')) {
+				$('#' + this.id + '-off').hide();
+				$('#' + this.id + '-on').show();
 			}
 			else {
-				io.write($(this).attr('data-item'), $(this).attr('data-val-off'));
-			}
-		}
+				$('#' + this.id + '-on').hide();
+				$('#' + this.id + '-off').show();
+			}	
+		},
+
 	});
 
-	$('span[data-widget="basic.switch"] > a > img').on('hover', function (event) {
-		event.stopPropagation();
-		if (event.type === 'mouseenter') {
-			$(this).addClass("ui-focus");
-		}
-		else {
-			$(this).removeClass("ui-focus");
-		}
-	});
 
 // ----- basic.switch.v1 ------------------------------------------------------
 $('span[data-widget="basic.switch.v1"]').on({
